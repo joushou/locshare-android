@@ -3,7 +3,7 @@
 
     <EditTextPreference
         android:key="server_address"
-        android:inputType="textUri"
+        android:inputType="numberDecimal"
         android:maxLines="1"
         android:singleLine="true"
         android:title="@string/pref_title_server_address" />
