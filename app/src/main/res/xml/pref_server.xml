@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <EditTextPreference
+        android:key="server_address"
+        android:inputType="textUri"
+        android:maxLines="1"
+        android:singleLine="true"
+        android:title="@string/pref_title_server_address" />
+    <wtf.kl.locshare.IntEditTextPreference
+        android:key="server_port"
+        android:inputType="numberDecimal"
+        android:maxLines="1"
+        android:singleLine="true"
+        android:title="@string/pref_title_server_port" />
+
+</PreferenceScreen>

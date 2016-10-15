@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Locshare</string>
+
+    <string name="action_settings">Settings</string>
+    <string name="action_done">Done</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Delete</string>
+
+    <string name="pref_header_location">Location</string>
+    <string name="pref_header_server">Server</string>
+
+    <string name="pref_title_share_location">Share location</string>
+    <string name="pref_title_share_movement">Share movement</string>
+    <string name="pref_title_precision">Precision</string>
+    <string name="pref_title_server_address">Server address</string>
+    <string name="pref_title_server_port">Server port</string>
+    <string name="pref_title_max_update_interval">Shortest update interval</string>
+    <string name="pref_title_update_interval">Update interval</string>
+
+    <string name="pref_summary_share_location">Send location updates to locshare server</string>
+    <string name="pref_summary_share_movement">Include direction and speed in location updates</string>
+    <string name="pref_summary_precision">Precision to use for background location requests</string>
+    <string name="pref_summary_max_update_interval">The exact shortest update interval</string>
+    <string name="pref_summary_update_interval">The approximate interval at which location updates will be requested</string>
+
+
+    <string name="title_activity_map">Map</string>
+    <string name="title_activity_add">Add</string>
+    <string name="title_activity_settings">Settings</string>
+
+    <string name="label_distance">Distance</string>
+    <string name="label_name">Name</string>
+    <string name="label_location">Location</string>
+    <string name="label_remote_pubkey">Remote public key</string>
+    <string name="label_local_privkey">Local private key</string>
+    <string name="label_local_pubkey">Local public key</string>
+    <string name="label_time">Time</string>
+    <string name="label_coordinates">Coordinates</string>
+    <string name="label_address">Approximate address</string>
+    <string name="label_movement">Movement</string>
+
+
+    <string name="placeholder_unavailable">Unavailable</string>
+
+</resources>

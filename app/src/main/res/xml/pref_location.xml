@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <SwitchPreference
+        android:key="share_location"
+        android:defaultValue="true"
+        android:title="@string/pref_title_share_location"
+        android:summary="@string/pref_summary_share_location" />
+    <SwitchPreference
+        android:key="share_movement"
+        android:defaultValue="true"
+        android:title="@string/pref_title_share_movement"
+        android:summary="@string/pref_summary_share_movement" />
+    <wtf.kl.locshare.IntListPreference
+        android:key="precision"
+        android:title="@string/pref_title_precision"
+        android:summary="@string/pref_summary_precision"
+        android:entries="@array/pref_entries_precision"
+        android:entryValues="@array/pref_values_precision" />
+    <wtf.kl.locshare.IntListPreference
+        android:key="max_update_interval"
+        android:title="@string/pref_title_max_update_interval"
+        android:summary="@string/pref_summary_max_update_interval"
+        android:entries="@array/pref_entries_interval"
+        android:entryValues="@array/pref_values_interval" />
+    <wtf.kl.locshare.IntListPreference
+        android:key="update_interval"
+        android:title="@string/pref_title_update_interval"
+        android:summary="@string/pref_summary_update_interval"
+        android:entries="@array/pref_entries_interval"
+        android:entryValues="@array/pref_values_interval" />
+
+</PreferenceScreen>
