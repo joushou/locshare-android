@@ -26,7 +26,8 @@
         android:id="@+id/map_fragment"
         android:name="com.google.android.gms.maps.MapFragment"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 
     <android.support.v4.widget.NestedScrollView
         android:id="@+id/map_bottom_sheet"
