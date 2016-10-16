@@ -4,10 +4,6 @@ import android.content.Context;
 import android.preference.ListPreference;
 import android.util.AttributeSet;
 
-/**
- * Created by kenny on 10/15/16.
- */
-
 public class IntListPreference extends ListPreference {
 
     public IntListPreference(Context context) { super(context); }

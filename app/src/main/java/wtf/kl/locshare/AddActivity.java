@@ -1,5 +1,6 @@
 package wtf.kl.locshare;
 
+import android.app.ActionBar;
 import android.content.Context;
 import android.graphics.Color;
 import android.os.AsyncTask;
@@ -125,8 +126,11 @@ public class AddActivity extends Activity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setActionBar(toolbar);
 
-        getActionBar().setDisplayHomeAsUpEnabled(true);
-        getActionBar().setHomeAsUpIndicator(R.drawable.ic_clear_24dp);
+        ActionBar ab = getActionBar();
+        if (ab != null) {
+            ab.setDisplayHomeAsUpEnabled(true);
+            ab.setHomeAsUpIndicator(R.drawable.ic_clear_24dp);
+        }
 
         new KeyGenerator().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }

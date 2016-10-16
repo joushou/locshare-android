@@ -2,12 +2,7 @@ package wtf.kl.locshare;
 
 import android.content.Context;
 import android.preference.EditTextPreference;
-import android.preference.ListPreference;
 import android.util.AttributeSet;
-
-/**
- * Created by kenny on 10/15/16.
- */
 
 public class IntEditTextPreference extends EditTextPreference {
     public IntEditTextPreference(Context context) { super(context); }

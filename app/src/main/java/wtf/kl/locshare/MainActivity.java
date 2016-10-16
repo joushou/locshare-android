@@ -13,8 +13,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toolbar;
 
-import com.google.android.gms.location.LocationRequest;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -35,8 +33,8 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
             case PERMISSION_REQUEST_ACCESS_FINE_LOCATION:
                 SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Intent intent = new Intent(this, LocationService.class);
-                    intent.setAction(LocationService.START_LOCATION_SERVICE);
+                    Intent intent = new Intent(this, LocationPublisher.class);
+                    intent.setAction(LocationPublisher.START_LOCATION_SERVICE);
                     startService(intent);
                 } else {
                     SharedPreferences.Editor edit = sp.edit();
@@ -68,7 +66,11 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
             obj = UserStore.toJSON();
         } catch (JSONException e) {
             e.printStackTrace();
-            try { fos.close(); } catch (IOException x) {}
+            try {
+                fos.close();
+            } catch (IOException x) {
+                // PASS
+            }
             return;
         }
 
@@ -118,8 +120,8 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         switch (key) {
             case "share_location":
-                Intent intent = new Intent(this, LocationService.class);
-                intent.setAction(LocationService.START_LOCATION_SERVICE);
+                Intent intent = new Intent(this, LocationPublisher.class);
+                intent.setAction(LocationPublisher.START_LOCATION_SERVICE);
                 startService(intent);
         }
     }
@@ -152,14 +154,9 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
             return;
         }
 
-        Intent locIntent = new Intent(this, LocationService.class);
-        locIntent.setAction(LocationService.START_LOCATION_SERVICE);
+        Intent locIntent = new Intent(this, LocationPublisher.class);
+        locIntent.setAction(LocationPublisher.START_LOCATION_SERVICE);
         startService(locIntent);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
     }
 
     @Override

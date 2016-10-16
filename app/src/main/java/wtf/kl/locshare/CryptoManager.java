@@ -3,6 +3,7 @@ package wtf.kl.locshare;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Locale;
 
 import org.whispersystems.curve25519.Curve25519;
 import org.whispersystems.curve25519.Curve25519KeyPair;
@@ -37,7 +38,7 @@ class CryptoManager {
         }
 
         if (plainText.length > k_E.length) {
-            throw new AssertionError(String.format("plainText too long: %d > %d", plainText.length, k_E.length));
+            throw new AssertionError(String.format(Locale.ENGLISH, "plainText too long: %d > %d", plainText.length, k_E.length));
         }
 
         byte[] cipherText = new byte[r.length + plainText.length];

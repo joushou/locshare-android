@@ -1,5 +1,7 @@
 package wtf.kl.locshare;
 
+import android.support.annotation.NonNull;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -59,6 +61,7 @@ class UserStore {
         }
     }
 
+    @NonNull
     static JSONObject toJSON() throws JSONException {
         JSONObject obj = new JSONObject();
         JSONArray arr = new JSONArray();
@@ -69,7 +72,6 @@ class UserStore {
             Set<String> keys = store.users.keySet();
             for (String key : keys) {
                 JSONObject o = store.users.get(key).toJSON();
-                if (o == null) return null;
                 arr.put(o);
             }
 
@@ -87,7 +89,6 @@ class UserStore {
 
         for (int i = 0; i < arr.length(); i++) {
             User user = User.fromJSON(arr.getJSONObject(i));
-            if (user == null) return;
             s.users.put(user.uuid, user);
 
         }

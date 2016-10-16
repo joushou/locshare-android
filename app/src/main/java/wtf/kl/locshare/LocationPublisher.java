@@ -28,10 +28,9 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
-public class LocationService extends Service implements GoogleApiClient.ConnectionCallbacks {
+public class LocationPublisher extends Service implements GoogleApiClient.ConnectionCallbacks {
     private static final String TAG = "locshare/LocSer";
     public static final String START_LOCATION_SERVICE = "wtf.kl.locshare.START_LOCATION_SERVICE";
     public static final String NETWORK_NOTIFICATION = "wtf.kl.locshare.NETWORK_NOTIFICATION";
@@ -46,13 +45,13 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         final String host;
         final int port;
         final boolean movement;
-        final List<Location> locations;
+        final Location location;
 
-        PublisherArg(String host, int port, boolean movement, List<Location> locations) {
+        PublisherArg(String host, int port, boolean movement, Location location) {
             this.host = host;
             this.port = port;
             this.movement = movement;
-            this.locations = locations;
+            this.location = location;
         }
     }
 
@@ -60,9 +59,6 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         @Override
         public Boolean doInBackground(PublisherArg ...params) {
             for (PublisherArg arg : params) {
-                if (arg.locations.size() == 0)
-                    continue;
-
                 Socket socket = null;
                 BufferedWriter os = null;
                 try {
@@ -71,22 +67,20 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
                     Set<String> keys = UserStore.getUserKeys();
 
-                    for (Location location : arg.locations) {
-                        if (!arg.movement) {
-                            location.setSpeed(0);
-                            location.setBearing(0);
-                        }
-                        byte[] msg = LocationCodec.encode(location);
+                    if (!arg.movement) {
+                        arg.location.setSpeed(0);
+                        arg.location.setBearing(0);
+                    }
+                    byte[] msg = LocationCodec.encode(arg.location);
 
-                        for (String key : keys) {
-                            User user = UserStore.getUser(key);
-                            if (user.remotePubKey == null || user.remotePubKey.length != 32)
-                                continue;
+                    for (String key : keys) {
+                        User user = UserStore.getUser(key);
+                        if (user.remotePubKey == null || user.remotePubKey.length != 32)
+                            continue;
 
-                            byte[] p = CryptoManager.encryptWithCurve25519PublicKey(msg, user.remotePubKey);
-                            String data = Base64.encodeToString(p, Base64.NO_WRAP | Base64.URL_SAFE);
-                            os.write(String.format("pub %s %s\n", user.remoteAsBase64(), data));
-                        }
+                        byte[] p = CryptoManager.encryptWithCurve25519PublicKey(msg, user.remotePubKey);
+                        String data = Base64.encodeToString(p, Base64.NO_WRAP | Base64.URL_SAFE);
+                        os.write(String.format("pub %s %s\n", user.remoteAsBase64(), data));
                     }
 
                     os.flush();
@@ -97,8 +91,20 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                     socket = null;
 
                 } catch (IOException e) {
-                    if (os != null) try { os.close(); } catch (IOException x) { }
-                    if (socket != null) try { socket.close(); } catch (IOException x) { }
+                    if (os != null) {
+                        try {
+                            os.close();
+                        } catch (IOException x) {
+                            // PASS
+                        }
+                    }
+                    if (socket != null) {
+                        try {
+                            socket.close();
+                        } catch (IOException x) {
+                            // PASS
+                        }
+                    }
 
                     return false;
                 }
@@ -110,11 +116,8 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         @Override
         public void onPostExecute(Boolean success) {
             if (!success && !isInternetAvailable()) {
-                Log.v(TAG, "Network failure - waiting for network");
                 waitForNetwork();
             }
-
-            Log.v(TAG, "Processed with success: " + success.toString());
         }
     }
 
@@ -154,12 +157,13 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                 .setInterval(interval)
                 .setSmallestDisplacement(25);
 
-        Intent intent = new Intent(this, LocationService.class);
+        Intent intent = new Intent(this, LocationPublisher.class);
         pendingLocationIntent = PendingIntent.getService(this, 0, intent, 0);
 
         LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, pendingLocationIntent);
 
-        stopSelf();
+        publish(LocationServices.FusedLocationApi.getLastLocation(googleApiClient));
+
     }
 
     private void waitForNetwork() {
@@ -179,7 +183,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         ConnectivityManager cm =
                 (ConnectivityManager)this.getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        Intent intent = new Intent(this, LocationService.class);
+        Intent intent = new Intent(this, LocationPublisher.class);
         intent.setAction(NETWORK_NOTIFICATION);
         pendingNetworkIntent = PendingIntent.getService(this, 0, intent, 0);
 
@@ -207,6 +211,22 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         registerLocationWatcher();
     }
 
+    private void publish(Location location) {
+        if (location == null)
+            return;
+
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+
+        PublisherArg publisherArg = new PublisherArg(
+                sp.getString("server_address", ""),
+                sp.getInt("server_port", 0),
+                sp.getBoolean("share_movement", true),
+                location
+        );
+
+        new PublisherTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, publisherArg);
+    }
+
     private static boolean isNetworkNotification(Intent intent) {
         String action = intent.getAction();
         return action != null && action.equals(NETWORK_NOTIFICATION);
@@ -228,7 +248,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         if (startReason != null) {
             ArrayList<Intent> sr = startReason;
 
-            startReason = new ArrayList<Intent>();
+            startReason = new ArrayList<>();
             for (Intent intent : sr) {
                 onStartCommand(intent, 0, 0);
             }
@@ -265,23 +285,11 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
             return START_NOT_STICKY;
 
         if (LocationResult.hasResult(intent)) {
-            Log.v(TAG, "Location intent received");
             LocationResult locationResult = LocationResult.extractResult(intent);
-            SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-
-            PublisherArg publisherArg = new PublisherArg(
-                    sp.getString("server_address", ""),
-                    sp.getInt("server_port", 0),
-                    sp.getBoolean("share_movement", true),
-                    locationResult.getLocations()
-            );
-
-            new PublisherTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, publisherArg);
+            publish(locationResult.getLastLocation());
         } else if (isNetworkNotification(intent)) {
-            Log.v(TAG, "Network update received");
             networkNotification();
         } else if (isStartRequest(intent)) {
-            Log.v(TAG, "Start request received");
             registerLocationWatcher();
         }
 

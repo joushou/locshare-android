@@ -2,20 +2,16 @@ package wtf.kl.locshare;
 
 import android.app.ActionBar;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.Intent;
-import android.graphics.drawable.ColorDrawable;
-import android.location.Address;
-import android.location.Geocoder;
+import android.content.SharedPreferences;
 import android.location.Location;
-import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.design.widget.BottomSheetBehavior;
 import android.support.v4.app.FragmentActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toolbar;
 
@@ -30,61 +26,103 @@ import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-import java.io.IOException;
-import java.security.Security;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.List;
 import java.util.Locale;
+
+import static java.lang.Math.abs;
 
 public class MapActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks {
     private GoogleApiClient googleApiClient = null;
     private User user = null;
     private Location location = null;
+    private GoogleMap map = null;
+    private GeocodeUtil.GeocoderTask geocoderTask = null;
+    private final LocationSubscriber locationSubscriber = new LocationSubscriber();
 
-    private class GeocoderTask extends AsyncTask<Location, Void, Address> {
-        private final Context context;
 
-        public GeocoderTask(Context context) {
-            this.context = context;
-        }
-        protected Address doInBackground(Location... params) {
-            if (params.length != 1) return null;
-            Geocoder gcd = new Geocoder(context, Locale.getDefault());
+    private void updateSheet() {
+        if (location == null)
+            return;
 
-            try {
-                List<Address> addresses = gcd.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-                if (addresses.size() == 0)
-                    return null;
+        View bottomSheet = findViewById(R.id.map_bottom_sheet);
 
-                return addresses.get(0);
-            } catch (IOException e) {
-                return null;
-            } catch (IllegalArgumentException e) {
-                return null;
-            }
-        }
+        DateFormat formatter = SimpleDateFormat.getDateTimeInstance();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(location.getTime());
+        TextView time = (TextView) bottomSheet.findViewById(R.id.map_sheet_time);
+        time.setText(formatter.format(calendar.getTime()));
 
-        protected void onPostExecute(Address addr) {
-            View bottomSheet = findViewById( R.id.map_bottom_sheet );
+        Double latitude = location.getLatitude();
+        Double longitude = location.getLongitude();
+        TextView coordinates = (TextView) bottomSheet.findViewById(R.id.map_sheet_coordinates);
+        coordinates.setText(String.format(Locale.ENGLISH,
+                "%.5f°%s %.5f°%s",
+                abs(latitude),
+                latitude >= 0 ? "N" : "S",
+                abs(longitude),
+                longitude >= 0 ? "E" : "W"));
 
-            if (addr != null) {
-                String locationStr = "";
-                for (int i = 0; i < addr.getMaxAddressLineIndex(); i++) {
-                    locationStr += addr.getAddressLine(i) + "\n";
+        TextView movement = (TextView) bottomSheet.findViewById(R.id.map_sheet_movement);
+        movement.setText(String.format(Locale.ENGLISH, "%.1f km/h\n%.1f degrees", location.getSpeed() / 1000, location.getBearing()));
+
+        updateMarkers();
+
+        GeocodeUtil.Request req = new GeocodeUtil.Request(user.uuid, location, new int[]{GeocodeUtil.TWO_LINE_SUMMARY, GeocodeUtil.FULL_ADDRESS});
+
+        geocoderTask = GeocodeUtil.Geocode(this, new GeocodeUtil.Request[]{req}, (resps) -> {
+            if (resps.length == 0) return;
+
+            GeocodeUtil.Response resp = resps[0];
+            if (!resp.success) return;
+
+            TextView localityView = (TextView) bottomSheet.findViewById(R.id.map_sheet_locality);
+            TextView thoroughfareView = (TextView) bottomSheet.findViewById(R.id.map_sheet_thoroughfare);
+            TextView addressView = (TextView) bottomSheet.findViewById(R.id.map_sheet_address);
+
+            for (GeocodeUtil.Response.Result result : resp.results) {
+                switch (result.type) {
+                    case GeocodeUtil.FULL_ADDRESS:
+                        addressView.setText(result.lines[0]);
+                        break;
+                    case GeocodeUtil.TWO_LINE_SUMMARY:
+                        thoroughfareView.setText(result.lines[0]);
+                        localityView.setText(result.lines[1]);
+                        break;
                 }
-                locationStr += addr.getCountryName();
-                TextView address = (TextView) bottomSheet.findViewById(R.id.map_sheet_address);
-                address.setText(locationStr);
-                TextView location = (TextView) bottomSheet.findViewById(R.id.map_sheet_locality);
-                location.setText(addr.getLocality());
-                TextView thoroughfare = (TextView) bottomSheet.findViewById(R.id.map_sheet_thoroughfare);
-                thoroughfare.setText(addr.getThoroughfare());
             }
 
-            BottomSheetBehavior bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
-            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+            BottomSheetBehavior<View> bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
+            if (bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_HIDDEN)
+                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+
+            geocoderTask = null;
+        });
+    }
+
+    private void updateMarkers() {
+        if (map == null)
+            return;
+
+        map.clear();
+        location = user.getLastLocation();
+
+        if (location == null)
+            return;
+
+        LatLng ll = new LatLng(location.getLatitude(), location.getLongitude());
+        if (location.getAccuracy() > 20) {
+            map.addCircle(new CircleOptions()
+                    .center(ll)
+                    .radius(location.getAccuracy())
+                    .strokeWidth(4)
+                    .fillColor(0x30FFAA00)
+                    .strokeColor(0x70FFAA00));
         }
+
+        map.addMarker(new MarkerOptions().position(ll).title(user.name));
+        map.moveCamera(CameraUpdateFactory.newLatLngZoom(ll, 15));
     }
 
     @Override
@@ -134,20 +172,16 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
         setActionBar(toolbar);
 
         ActionBar ab = getActionBar();
-        ab.setDisplayHomeAsUpEnabled(true);
+        if (ab != null) {
+            ab.setDisplayHomeAsUpEnabled(true);
+        }
 
         View bottomSheet = findViewById(R.id.map_bottom_sheet);
         BottomSheetBehavior bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
         bottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
 
         View peek = bottomSheet.findViewById(R.id.map_sheet_peek);
-        peek.post(() -> {
-            bottomSheetBehavior.setPeekHeight(peek.getHeight());
-        });
-
-        MapFragment mapFragment =
-                (MapFragment) getFragmentManager().findFragmentById(R.id.map_fragment);
-        mapFragment.getMapAsync(this);
+        peek.post(() -> bottomSheetBehavior.setPeekHeight(peek.getHeight()));
     }
 
     @Override
@@ -164,24 +198,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
         user = UserStore.getUser(b.getString("uuid"));
         location = user.getLastLocation();
 
-        if (location != null) {
-            View bottomSheet = findViewById(R.id.map_bottom_sheet);
-
-            SimpleDateFormat formatter = new SimpleDateFormat("HH:mm dd/MM/yyyy");
-            Calendar calendar = Calendar.getInstance();
-            calendar.setTimeInMillis(location.getTime());
-            TextView time = (TextView) bottomSheet.findViewById(R.id.map_sheet_time);
-            time.setText(formatter.format(calendar.getTime()));
-
-            TextView coordinates = (TextView) bottomSheet.findViewById(R.id.map_sheet_coordinates);
-            coordinates.setText(String.format("%.8f, %.8f (±%.2fm)", location.getLatitude(), location.getLongitude(), location.getAccuracy()));
-
-            TextView movement = (TextView) bottomSheet.findViewById(R.id.map_sheet_movement);
-            movement.setText(String.format("%.1f km/h\n%.1f degrees", location.getSpeed() / 1000, location.getBearing()));
-
-            new GeocoderTask(getApplicationContext()).execute(location);
-        }
-
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         toolbar.setTitle(user.name);
 
@@ -192,19 +208,36 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
 
         googleApiClient.connect();
 
+        updateSheet();
+
+        if (map == null) {
+            MapFragment mapFragment =
+                    (MapFragment) getFragmentManager().findFragmentById(R.id.map_fragment);
+            mapFragment.getMapAsync(this);
+        } else {
+            updateMarkers();
+        }
+
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+        locationSubscriber.start(
+                sp.getString("server_address", ""),
+                sp.getInt("server_port", 0),
+                new String[]{user.uuid},
+                (uuid) -> updateSheet());
+
     }
 
     private String distanceAsString(double distance) {
         if (Double.isNaN(distance)) {
             return "";
-        } else if (distance > 1010000) {
-            return String.format("%.2f Mm", distance/1000000);
-        } else if (distance > 1010) {
-            return String.format("%.2f km", distance/1000);
-        } else if (distance > 1.01) {
-            return String.format("%.2f m", distance);
+        } else if (distance > 999999) {
+            return String.format(Locale.ENGLISH, "%.1f Mm", distance/1000000);
+        } else if (distance > 999) {
+            return String.format(Locale.ENGLISH, "%.1f km", distance/1000);
+        } else if (distance > 0.999) {
+            return String.format(Locale.ENGLISH, "%.1f m", distance);
         } else {
-            return String.format("%.2f mm", distance/1000);
+            return String.format(Locale.ENGLISH, "%.2f mm", distance/1000);
         }
     }
 
@@ -222,7 +255,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
                 d.setText(distance);
             });
         } catch (SecurityException e) {
-
+            // PASS
         }
     }
 
@@ -233,6 +266,12 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
     public void onPause() {
         super.onPause();
 
+        locationSubscriber.stop();
+
+        if (geocoderTask != null) {
+            geocoderTask.cancel(true);
+            geocoderTask = null;
+        }
         if(googleApiClient != null) {
             googleApiClient.disconnect();
             googleApiClient = null;
@@ -241,6 +280,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
 
     @Override
     public void onMapReady(GoogleMap map) {
+        map.clear();
+
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         toolbar.setTitle(user.name);
 
@@ -249,19 +290,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
         } catch (SecurityException e) {
             // PASS
         }
+        this.map = map;
 
-        if (location != null) {
-            LatLng ll = new LatLng(location.getLatitude(), location.getLongitude());
-            if (location.getAccuracy() > 100) {
-                map.addCircle(new CircleOptions()
-                        .center(ll)
-                        .radius(location.getAccuracy())
-                        .strokeColor(0x300000FF)
-                        .fillColor(0x200000FF));
-            }
-            map.addMarker(new MarkerOptions().position(ll).title(user.name));
-            map.moveCamera(CameraUpdateFactory.newLatLngZoom(ll, 15));
-        }
-
+        updateMarkers();
     }
 }

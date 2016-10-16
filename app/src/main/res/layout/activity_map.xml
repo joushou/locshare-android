@@ -21,6 +21,149 @@
 
     </android.support.design.widget.AppBarLayout>
 
-    <include layout="@layout/content_map" />
+    <fragment xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/map_fragment"
+        android:name="com.google.android.gms.maps.MapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
 
+    <android.support.v4.widget.NestedScrollView
+        android:id="@+id/map_bottom_sheet"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_below="@id/map_fragment"
+        android:clipToPadding="true"
+        android:background="@android:color/white"
+        app:layout_behavior="android.support.design.widget.BottomSheetBehavior">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/map_sheet_peek">
+
+                <TextView
+                    android:id="@+id/map_sheet_distance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="10dip"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:gravity="center_vertical"
+                    android:maxLines="1"
+                    android:textSize="18sp"
+                    />
+
+                <RelativeLayout
+                    android:layout_height="wrap_content"
+                    android:layout_width="fill_parent"
+                    android:layout_toStartOf="@id/map_sheet_distance">
+                    <TextView
+                        android:id="@+id/map_sheet_thoroughfare"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/placeholder_unavailable"
+
+                        android:paddingTop="16dp"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:textSize="18sp"
+                        android:layout_alignParentTop="true" />
+
+                    <TextView
+                        android:id="@+id/map_sheet_locality"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/map_sheet_thoroughfare"
+                        android:text="@string/placeholder_unavailable"
+                        android:paddingBottom="16dp"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:textSize="14sp"/>
+                </RelativeLayout>
+
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/map_sheet_peek"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/map_sheet_time_headline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/label_time"
+                    android:padding="0dp"
+                    android:textIsSelectable="true"
+                    android:textSize="14sp" />
+                <TextView
+                    android:id="@+id/map_sheet_time"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/map_sheet_time_headline"
+                    android:text="@string/placeholder_unavailable"
+                    android:paddingBottom="16dp"
+                    android:textIsSelectable="true"
+                    android:textSize="16sp"/>
+                <TextView
+                    android:id="@+id/map_sheet_coordinates_headline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/map_sheet_time"
+                    android:text="@string/label_coordinates"
+                    android:padding="0dp"
+                    android:textIsSelectable="true"
+                    android:textSize="14sp" />
+                <TextView
+                    android:id="@+id/map_sheet_coordinates"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/map_sheet_coordinates_headline"
+                    android:text="@string/placeholder_unavailable"
+                    android:paddingBottom="16dp"
+                    android:textIsSelectable="true"
+                    android:textSize="16sp"/>
+                <TextView
+                    android:id="@+id/map_sheet_address_headline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/map_sheet_coordinates"
+                    android:text="@string/label_address"
+                    android:padding="0dp"
+                    android:textSize="14sp" />
+                <TextView
+                    android:id="@+id/map_sheet_address"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/map_sheet_address_headline"
+                    android:text="@string/placeholder_unavailable"
+                    android:paddingBottom="16dp"
+                    android:textIsSelectable="true"
+                    android:textSize="16sp"/>
+                <TextView
+                    android:id="@+id/map_sheet_movement_headline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/map_sheet_address"
+                    android:text="@string/label_movement"
+                    android:padding="0dp"
+                    android:textSize="14sp" />
+                <TextView
+                    android:id="@+id/map_sheet_movement"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/map_sheet_movement_headline"
+                    android:text="@string/placeholder_unavailable"
+                    android:paddingBottom="16dp"
+                    android:textIsSelectable="true"
+                    android:textSize="16sp"/>
+            </RelativeLayout>
+        </RelativeLayout>
+    </android.support.v4.widget.NestedScrollView>
 </android.support.design.widget.CoordinatorLayout>

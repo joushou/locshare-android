@@ -1,21 +1,16 @@
 package wtf.kl.locshare;
 
 import android.location.Location;
-import android.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 
 class LocationCodec {
 
     public static byte[] encode(final Location location) {
-        Log.v("codec", "Time out: " + Long.toString(location.getTime()));
-        ByteBuffer test = ByteBuffer.allocate(8);
-        test.putLong(location.getTime());
-
-        Log.v("codec", "Time test: " + Long.toString(test.getLong(0)));
 
         ByteBuffer buffer = ByteBuffer.allocate(7 * 8);
         buffer.putLong(location.getTime());
@@ -34,15 +29,17 @@ class LocationCodec {
         Location location = new Location("wtf.kl.locshare.LocationCodec");
         ByteBuffer buffer = ByteBuffer.wrap(input);
 
-        location.setTime(buffer.getLong());
-        location.setAccuracy((float)buffer.getDouble());
-        location.setLatitude(buffer.getDouble());
-        location.setLongitude(buffer.getDouble());
-        location.setAltitude(buffer.getDouble());
-        location.setBearing((float)buffer.getDouble());
-        location.setSpeed((float)buffer.getDouble());
-
-        Log.v("codec", "Time in: " + Long.toString(location.getTime()));
+        try {
+            location.setTime(buffer.getLong());
+            location.setAccuracy((float) buffer.getDouble());
+            location.setLatitude(buffer.getDouble());
+            location.setLongitude(buffer.getDouble());
+            location.setAltitude(buffer.getDouble());
+            location.setBearing((float) buffer.getDouble());
+            location.setSpeed((float) buffer.getDouble());
+        } catch(BufferUnderflowException e) {
+            return null;
+        }
 
         return location;
     }

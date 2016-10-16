@@ -1,6 +1,7 @@
 package wtf.kl.locshare;
 
 import android.location.Location;
+import android.support.annotation.NonNull;
 import android.util.Base64;
 
 import org.json.JSONArray;
@@ -9,18 +10,19 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
-public class User {
-    public String uuid;
-    public byte[] localPrivKey;
-    public byte[] localPubKey;
-    public byte[] remotePubKey;
-    public String name;
+class User {
+    String uuid;
+    byte[] localPrivKey;
+    byte[] localPubKey;
+    byte[] remotePubKey;
+    int cap = 10;
+    String name;
 
     private final ArrayList<Location> locations = new ArrayList<>();
 
-    public User() {}
+    private User() {}
 
-    public User(String uuid, byte[] localPrivKey, byte[] localPubKey, byte[] remotePubKey, String name) {
+    User(String uuid, byte[] localPrivKey, byte[] localPubKey, byte[] remotePubKey, String name) {
         this.uuid = uuid;
         this.localPrivKey = localPrivKey;
         this.localPubKey = localPubKey;
@@ -28,23 +30,23 @@ public class User {
         this.name = name;
     }
 
-    public String localAsBase64() {
+    String localAsBase64() {
         return Base64.encodeToString(localPubKey, Base64.URL_SAFE|Base64.NO_WRAP);
     }
 
-    public String localPrivAsBase64() {
+    String localPrivAsBase64() {
         return Base64.encodeToString(localPrivKey, Base64.URL_SAFE|Base64.NO_WRAP);
     }
 
-    public String remoteAsBase64() {
+    String remoteAsBase64() {
         return Base64.encodeToString(remotePubKey, Base64.URL_SAFE|Base64.NO_WRAP);
     }
 
-    public void addLocation(Location l, int cap) {
-        if (cap < 1) {
-            throw new IllegalArgumentException("cap must be one or greater");
-        }
+    void setCap(int i) {
+        cap = i;
+    }
 
+    void addLocation(Location l) {
         synchronized (this) {
             while (locations.size() >= cap) {
                 locations.remove(0);
@@ -54,7 +56,7 @@ public class User {
         }
     }
 
-    public Location[] getLocations(int max) {
+    Location[] getLocations(int max) {
         if (max < 1) {
             throw new IllegalArgumentException("max must be one or greater");
         }
@@ -76,7 +78,7 @@ public class User {
         }
     }
 
-    public Location getLastLocation() {
+    Location getLastLocation() {
         synchronized (this) {
             if (locations.size() > 0) {
                 return locations.get(locations.size() - 1);
@@ -85,7 +87,8 @@ public class User {
         }
     }
 
-    public JSONObject toJSON() throws JSONException {
+    @NonNull
+    JSONObject toJSON() throws JSONException {
         JSONObject obj = new JSONObject();
         JSONArray arr = new JSONArray();
 
@@ -110,7 +113,8 @@ public class User {
         return obj;
     }
 
-    public static User fromJSON(JSONObject obj) throws JSONException {
+    @NonNull
+    static User fromJSON(JSONObject obj) throws JSONException {
         User user = new User();
         user.uuid = obj.getString("uuid");
         user.name = obj.getString("name");

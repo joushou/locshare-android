@@ -37,7 +37,7 @@
     <string name="label_local_pubkey">Local public key</string>
     <string name="label_time">Time</string>
     <string name="label_coordinates">Coordinates</string>
-    <string name="label_address">Approximate address</string>
+    <string name="label_address">Address</string>
     <string name="label_movement">Movement</string>
 
 

@@ -41,11 +41,7 @@
             android:theme="@style/AppTheme.NoActionBar" />
 
         <service
-            android:name=".LocationService"
-            android:enabled="true"
-            android:exported="false" />
-        <service
-            android:name=".LocationListener"
+            android:name=".LocationPublisher"
             android:enabled="true"
             android:exported="false" />
 

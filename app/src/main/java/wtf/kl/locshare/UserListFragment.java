@@ -3,14 +3,13 @@ package wtf.kl.locshare;
 import android.app.ListFragment;
 import android.content.Context;
 import android.content.Intent;
-import android.location.Address;
-import android.location.Geocoder;
+import android.content.SharedPreferences;
 import android.location.Location;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.ResultReceiver;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.widget.SwipeRefreshLayout;
+import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,44 +18,29 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
-class ResultReceiverWrapper extends ResultReceiver {
-    interface OnReceiveResult {
-        void onReceiveResult(int resultCode, Bundle result);
-    }
-
-    private final OnReceiveResult cb;
-
-    public ResultReceiverWrapper(OnReceiveResult cb) {
-        super(null);
-        this.cb = cb;
-    }
-
-    @Override
-    protected void onReceiveResult(int resultCode, Bundle result) {
-        cb.onReceiveResult(resultCode, result);
-    }
-}
+import static java.lang.Math.abs;
 
 class UserListAdapter extends ArrayAdapter<UserListItem> {
-    static class ViewHolder {
+    private static class ViewHolder {
         TextView nameView;
         TextView locView;
         TextView distView;
+        TextView timeView;
     }
     private final Context context;
-    public final ArrayList<UserListItem> values;
+    final ArrayList<UserListItem> values;
 
-    public UserListAdapter(Context context, ArrayList<UserListItem> values) {
+    UserListAdapter(Context context, ArrayList<UserListItem> values) {
         super(context, R.layout.main_rowlayout, values);
         this.context = context;
         this.values = values;
@@ -77,6 +61,7 @@ class UserListAdapter extends ArrayAdapter<UserListItem> {
             viewHolder.nameView = (TextView) convertView.findViewById(R.id.userlist_name);
             viewHolder.locView = (TextView) convertView.findViewById(R.id.userlist_location);
             viewHolder.distView = (TextView) convertView.findViewById(R.id.userlist_distance);
+            viewHolder.timeView = (TextView) convertView.findViewById(R.id.userlist_time);
 
             convertView.setTag(viewHolder);
         } else {
@@ -88,6 +73,7 @@ class UserListAdapter extends ArrayAdapter<UserListItem> {
             viewHolder.nameView.setText(u.name);
             viewHolder.locView.setText(u.getLocationString());
             viewHolder.distView.setText(u.getDistanceString());
+            viewHolder.timeView.setText(u.getTimeString());
         }
 
         return convertView;
@@ -95,56 +81,79 @@ class UserListAdapter extends ArrayAdapter<UserListItem> {
 }
 
 class UserListItem {
-    public final String name;
-    public final String uuid;
+    final String name;
+    final String uuid;
     private Location location;
 
+    private Location locationForString;
     private String locationString;
     private double distance;
 
-    public UserListItem(String uuid, String name) {
+    UserListItem(String uuid, String name) {
         this.uuid = uuid;
         this.name = name;
     }
 
-    public void updateLocation(Location loc, String locstr, double distance) {
-        this.locationString = locstr;
+    boolean updateLocation(Location loc, double distance) {
+        boolean needUpdate = locationString == null ||
+                location == null ||
+                location.getAccuracy() <= loc.getAccuracy() * 1.5 ||
+                location.distanceTo(loc) < 10;
+
         this.location = loc;
         this.distance = distance;
+
+        return needUpdate;
     }
 
-    public boolean locationStringValid(Location loc) {
-        if (locationString == null || locationString.isEmpty())
-            return false;
-
-        if (this.location.getAccuracy() > loc.getAccuracy() * 1.5)
-            return false;
-
-        return this.location.distanceTo(loc) < 10;
+    void updateLocationString(String locationString) {
+        this.locationString = locationString;
     }
 
-    public String getLocationString() {
+    String getLocationString() {
         if (location == null)
             return "Location not known";
 
         if (locationString != null && !locationString.isEmpty())
             return locationString;
 
-        return String.format("%.8f, %.8f", location.getLatitude(), location.getLongitude());
+        Double latitude = location.getLatitude();
+        Double longitude = location.getLongitude();
+
+        return String.format(Locale.ENGLISH,
+                "%.5f°%s %.5f°%s",
+                abs(latitude),
+                latitude >= 0 ? "N" : "S",
+                abs(longitude),
+                longitude >= 0 ? "E" : "W");
     }
 
-    public String getDistanceString() {
+    String getDistanceString() {
         if (Double.isNaN(distance)) {
             return "";
-        } else if (distance > 1010000) {
-            return String.format("%.2f Mm", distance/1000000);
-        } else if (distance > 1010) {
-            return String.format("%.2f km", distance/1000);
-        } else if (distance > 1.01) {
-            return String.format("%.2f m", distance);
+        } else if (distance > 999999) {
+            return String.format(Locale.ENGLISH, "%.1f Mm", distance/1000000);
+        } else if (distance > 999) {
+            return String.format(Locale.ENGLISH, "%.1f km", distance/1000);
+        } else if (distance > 0.999) {
+            return String.format(Locale.ENGLISH, "%.1f m", distance);
         } else {
-            return String.format("%.2f mm", distance/1000);
+            return String.format(Locale.ENGLISH, "%.1f mm", distance/1000);
         }
+    }
+
+    String getTimeString() {
+        if (location == null)
+            return "";
+
+        Calendar calendar = Calendar.getInstance();
+        long time = calendar.getTimeInMillis();
+
+        if ((time - location.getTime()) < 60000) {
+            return "Now";
+        }
+
+        return DateUtils.getRelativeTimeSpanString(location.getTime(), time, DateUtils.MINUTE_IN_MILLIS).toString();
     }
 }
 
@@ -152,114 +161,86 @@ class UserListItem {
  * A placeholder fragment containing a simple view.
  */
 public class UserListFragment extends ListFragment implements SwipeRefreshLayout.OnRefreshListener, GoogleApiClient.ConnectionCallbacks {
-    private SwipeRefreshLayout swipeRefreshLayout;
+    SwipeRefreshLayout swipeRefreshLayout;
     private GoogleApiClient googleApiClient = null;
     private UserListAdapter adapter = null;
-    private GeocoderTask geocoderTask = null;
+    private GeocodeUtil.GeocoderTask geocoderTask = null;
     private long listVersion = 0;
     private Location location = null;
-
-    private final ResultReceiverWrapper resultReceiver = new ResultReceiverWrapper((resultCode, bundle) -> onRefresh());
-
-
-    private String geocode(Context context, final Location location) {
-        if (context == null) {
-            return "";
-        }
-
-        Geocoder gcd = new Geocoder(context, Locale.getDefault());
-
-        try {
-            List<Address> addresses = gcd.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-
-            if (addresses.size() == 0) {
-                return null;
-            }
-            Address addr = addresses.get(0);
-
-            String locationStr = "";
-
-
-            String thoroughfare = addr.getThoroughfare();
-            String sublocality = addr.getSubLocality();
-            String locality = addr.getLocality();
-            String country = addr.getCountryName();
-
-            if (thoroughfare != null) {
-                locationStr += thoroughfare;
-            }
-
-            if (locality != null) {
-                if (!locationStr.isEmpty()) {
-                    locationStr += ", ";
-                }
-
-                if (sublocality != null)
-                    locationStr += sublocality + ", " + locality;
-                else
-                    locationStr += locality;
-            }
-
-            if (!locationStr.isEmpty()) {
-                locationStr += ", ";
-            }
-            locationStr += country;
-
-            return locationStr;
-        } catch (IOException e) {
-            return null;
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
-    }
-    private class GeocoderTask extends AsyncTask<Void, Void, Void> {
-        private final Context context;
-        private final Location mloc;
-        public GeocoderTask(Context context, Location location) {
-            this.context = context;
-            this.mloc = location;
-        }
-
-        protected Void doInBackground(Void... params) {
-
-            // NOTE(kl): Not safe! Geocoder might run while user adds... things!
-            synchronized(adapter) {
-                for (UserListItem item : adapter.values) {
-                    if (isCancelled()) return null;
-
-                    User user = UserStore.getUser(item.uuid);
-                    Location loc = user.getLastLocation();
-                    if (loc == null) continue;
-                    if (item.locationStringValid(loc)) continue;
-
-                    double distance = Double.NaN;
-                    if (mloc != null) {
-                        distance = mloc.distanceTo(loc);
-                    }
-
-                    String locstr = geocode(context, loc);
-                    item.updateLocation(loc, locstr, distance);
-                }
-            }
-
-            return null;
-        }
-
-        protected void onPostExecute(Void v) {
-            if (swipeRefreshLayout != null)
-                swipeRefreshLayout.setRefreshing(false);
-            adapter.notifyDataSetChanged();
-            geocoderTask = null;
-        }
-    }
+    private final LocationSubscriber locationSubscriber = new LocationSubscriber();
 
     public UserListFragment() {}
+
+    private void updateTimes() {
+        adapter.notifyDataSetChanged();
+        View view = getView();
+        if (view != null)
+            view.postDelayed(this::updateTimes, 60000);
+    }
 
     public void onRefresh() {
         if (adapter == null || geocoderTask != null) return;
 
-        geocoderTask = new GeocoderTask(getContext(), location);
-        geocoderTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        if (googleApiClient != null && googleApiClient.isConnected()) {
+            try {
+                location = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
+            } catch (SecurityException e) {
+                // PASS
+            }
+        }
+
+        Map<String, Integer> uuidToIndex = new HashMap<>();
+        ArrayList<GeocodeUtil.Request> reqs = new ArrayList<>();
+
+        for (int idx = 0; idx < adapter.values.size(); idx++) {
+            UserListItem item = adapter.values.get(idx);
+            User user = UserStore.getUser(item.uuid);
+            Location loc = user.getLastLocation();
+            if (loc == null) continue;
+
+            double distance = Double.NaN;
+            if (location != null) {
+                distance = location.distanceTo(loc);
+            }
+
+            if(!item.updateLocation(loc, distance)) continue;
+
+            GeocodeUtil.Request req = new GeocodeUtil.Request(item.uuid, loc, new int[]{GeocodeUtil.ONE_LINE_SUMMARY});
+            uuidToIndex.put(item.uuid, idx);
+            reqs.add(req);
+        }
+
+        adapter.notifyDataSetChanged();
+
+        GeocodeUtil.Request[] reqArr = new GeocodeUtil.Request[reqs.size()];
+        reqArr = reqs.toArray(reqArr);
+
+        geocoderTask = GeocodeUtil.Geocode(getContext(), reqArr, (resps) -> {
+            swipeRefreshLayout.setRefreshing(false);
+            geocoderTask = null;
+
+            if (resps.length == 0) return;
+
+
+            for (GeocodeUtil.Response resp : resps) {
+                int idx = uuidToIndex.get(resp.key);
+                UserListItem item = adapter.values.get(idx);
+
+                if (!resp.success) {
+                    item.updateLocationString(null);
+                    continue;
+                }
+
+                for (GeocodeUtil.Response.Result r : resp.results) {
+                    switch (r.type) {
+                        case GeocodeUtil.ONE_LINE_SUMMARY:
+                            item.updateLocationString(r.lines[0]);
+                    }
+                }
+            }
+
+            adapter.notifyDataSetChanged();
+        });
     }
 
     private void makeList() {
@@ -301,9 +282,7 @@ public class UserListFragment extends ListFragment implements SwipeRefreshLayout
                 geocoderTask.cancel(true);
                 geocoderTask = null;
             }
-            synchronized(adapter) {
-                makeList();
-            }
+            makeList();
             onRefresh();
         }
 
@@ -314,25 +293,22 @@ public class UserListFragment extends ListFragment implements SwipeRefreshLayout
 
         googleApiClient.connect();
 
-        Intent intent = new Intent(getActivity(), LocationListener.class);
-        intent.putExtra("receiver", resultReceiver);
-        getActivity().startService(intent);
+        Set<String> keySet = UserStore.getUserKeys();
+        String[] keys = new String[keySet.size()];
+        keySet.toArray(keys);
+
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getContext());
+        locationSubscriber.start(
+                sp.getString("server_address", ""),
+                sp.getInt("server_port", 0),
+                keys,
+                (uuid) -> onRefresh());
+
+        updateTimes();
     }
 
     public void onConnected(Bundle connectionHint) {
-        LocationRequest locationRequest = LocationRequest.create()
-                .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY)
-                .setNumUpdates(1)
-                .setExpirationDuration(500);
-
-        try {
-            LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, (loc) -> {
-                location = loc;
-                onRefresh();
-            });
-        } catch (SecurityException e) {
-
-        }
+        onRefresh();
     }
 
     public void onConnectionSuspended(int cause) {}
@@ -340,14 +316,12 @@ public class UserListFragment extends ListFragment implements SwipeRefreshLayout
     @Override
     public void onPause() {
         super.onPause();
-        Intent intent = new Intent(getActivity(), LocationListener.class);
-        getActivity().stopService(intent);
+        locationSubscriber.stop();
 
         if (googleApiClient != null) {
             googleApiClient.disconnect();
             googleApiClient = null;
         }
-
     }
 
     @Override

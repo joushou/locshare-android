@@ -1,57 +1,50 @@
 package wtf.kl.locshare;
 
-import android.app.Service;
-import android.content.Intent;
-import android.content.SharedPreferences;
 import android.location.Location;
 import android.os.AsyncTask;
-import android.os.Bundle;
-import android.os.IBinder;
-import android.os.ResultReceiver;
-import android.preference.PreferenceManager;
 import android.util.Base64;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
-import java.util.Set;
 
-public class LocationListener extends Service {
-    private Listener listener = null;
-
-    class ListenerArg {
-        final ResultReceiver rr;
-        final String host;
-        final int port;
-
-        ListenerArg(ResultReceiver rr, String host, int port) {
-            this.rr = rr;
-            this.host = host;
-            this.port = port;
-        }
+class LocationSubscriber {
+    interface OnUpdate {
+        void onUpdate(String uuid);
     }
 
-    class Listener extends AsyncTask<ListenerArg, Void, Void> {
+    private Listener listener = null;
 
-        protected Void doInBackground(ListenerArg ...params) {
+    private class Listener extends AsyncTask<Void, String, Void> {
 
-            if (params.length == 0) return null;
-            ListenerArg arg = params[0];
+        final String host;
+        final int port;
+        final OnUpdate onUpdate;
+        final String[] uuids;
 
+
+        Listener(String host, int port, String[] uuids, OnUpdate onUpdate) {
+            this.host = host;
+            this.port = port;
+            this.uuids = uuids;
+            this.onUpdate = onUpdate;
+        }
+
+        protected Void doInBackground(Void ...params) {
             Socket socket = null;
-            BufferedWriter os;
+            BufferedWriter os = null;
             BufferedReader is = null;
+
             try {
 
-                socket = new Socket(arg.host, arg.port);
+                socket = new Socket(host, port);
                 os = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
                 is = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-                for (String key : UserStore.getUserKeys()) {
-                    User user = UserStore.getUser(key);
+                for (String uuid : uuids) {
+                    User user = UserStore.getUser(uuid);
                     os.write(String.format("sub %s\n", user.localAsBase64()));
                 }
                 os.flush();
@@ -84,53 +77,57 @@ public class LocationListener extends Service {
 
                     Location location = LocationCodec.decode(p);
 
-                    user.addLocation(location, 10);
-                    Bundle bundle = new Bundle();
-                    bundle.putString("uuid", uuid);
-                    arg.rr.send(0, bundle);
+                    user.addLocation(location);
+                    publishProgress(uuid);
                 }
+                os.close();
                 is.close();
                 socket.close();
 
             } catch (IOException e) {
-                if (is != null) try { is.close(); } catch (IOException x) {}
-                if (socket != null) try { socket.close(); } catch (IOException x) {}
+                if (is != null) {
+                    try {
+                        is.close();
+                    } catch (IOException x) {
+                        // PASS
+                    }
+                }
+                if (os != null) {
+                    try {
+                        os.close();
+                    } catch (IOException x) {
+                        // PASS
+                    }
+                }
+                if (socket != null) {
+                    try {
+                        socket.close();
+                    } catch (IOException x) {
+                        // PASS
+                    }
+                }
             }
 
             return null;
         }
 
-        protected void onPostExecute(Void v) {
-
+        protected void onProgressUpdate(String ...progress) {
+            for (String uuid : progress)
+                onUpdate.onUpdate(uuid);
         }
+
+        protected void onPostExecute(Void v) {}
     }
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-
-        ResultReceiver rr = intent.getParcelableExtra("receiver");
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-
-        ListenerArg listenerArg = new ListenerArg(
-                rr,
-                sp.getString("server_address", ""),
-                sp.getInt("server_port", 0)
-        );
-
-        listener = new Listener();
-        listener.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, listenerArg);
-
-        return START_STICKY;
+    public void start(String host, int port, String[] uuids, OnUpdate onUpdate) {
+        listener = new Listener(host, port, uuids, onUpdate);
+        listener.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
-    @Override
-    public void onDestroy() {
+    public void stop() {
         if (listener != null)
             listener.cancel(true);
+        listener = null;
     }
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
 }
