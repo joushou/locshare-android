@@ -4,6 +4,7 @@ import android.app.ActionBar;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Rect;
 import android.location.Location;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -11,6 +12,7 @@ import android.support.design.widget.BottomSheetBehavior;
 import android.support.v4.app.FragmentActivity;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toolbar;
@@ -39,6 +41,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
     private Location location = null;
     private GoogleMap map = null;
     private GeocodeUtil.GeocoderTask geocoderTask = null;
+    private BottomSheetBehavior<View> bottomSheetBehavior = null;
+    private View bottomSheet = null;
     private final LocationSubscriber locationSubscriber = new LocationSubscriber();
 
 
@@ -93,7 +97,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
                 }
             }
 
-            BottomSheetBehavior<View> bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
             if (bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_HIDDEN)
                 bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
 
@@ -176,12 +179,29 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
             ab.setDisplayHomeAsUpEnabled(true);
         }
 
-        View bottomSheet = findViewById(R.id.map_bottom_sheet);
-        BottomSheetBehavior bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
+        bottomSheet = findViewById(R.id.map_bottom_sheet);
+        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
         bottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
 
         View peek = bottomSheet.findViewById(R.id.map_sheet_peek);
         peek.post(() -> bottomSheetBehavior.setPeekHeight(peek.getHeight()));
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event){
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            switch (bottomSheetBehavior.getState()) {
+                case BottomSheetBehavior.STATE_EXPANDED:
+                    Rect outRect = new Rect();
+                    bottomSheet.getGlobalVisibleRect(outRect);
+
+                    if(!outRect.contains((int)event.getRawX(), (int)event.getRawY()))
+                        bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                    break;
+            }
+        }
+
+        return super.dispatchTouchEvent(event);
     }
 
     @Override
