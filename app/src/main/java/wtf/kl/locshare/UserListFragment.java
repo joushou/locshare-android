@@ -85,7 +85,6 @@ class UserListItem {
     final String uuid;
     private Location location;
 
-    private Location locationForString;
     private String locationString;
     private double distance;
 
