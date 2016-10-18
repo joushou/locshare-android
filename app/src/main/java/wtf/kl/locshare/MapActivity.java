@@ -154,11 +154,14 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
                 // 3. Get the AlertDialog from create()
                 AlertDialog dialog = builder.create();
                 dialog.show();
+                break;
+
             case R.id.action_edit:
                 Intent intent = new Intent(this, EditActivity.class);
                 intent.putExtra("uuid", user.uuid);
 
                 startActivity(intent);
+                break;
         }
 
 
@@ -269,9 +272,12 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
 
         try {
             LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, (loc) -> {
+                if (user.getLastLocation() == null)
+                    return;
+
                 String distance = distanceAsString(loc.distanceTo(user.getLastLocation()));
                 View bottomSheet = findViewById(R.id.map_bottom_sheet);
-                TextView d = (TextView)bottomSheet.findViewById(R.id.map_sheet_distance);
+                TextView d = (TextView) bottomSheet.findViewById(R.id.map_sheet_distance);
                 d.setText(distance);
             });
         } catch (SecurityException e) {
