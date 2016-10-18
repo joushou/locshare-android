@@ -48,7 +48,7 @@ public class AddActivity extends Activity {
         // as you specify a parent activity in AndroidManifest.xml.
 
         switch (item.getItemId()) {
-            case R.id.edit_done:
+            case R.id.add_done:
 
                 View view = getCurrentFocus();
                 if (view != null) {
