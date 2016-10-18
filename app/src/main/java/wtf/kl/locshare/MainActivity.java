@@ -64,7 +64,7 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
         JSONObject obj;
         try {
             obj = UserStore.toJSON();
-        } catch (JSONException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             try {
                 fos.close();
@@ -105,14 +105,14 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
         JSONObject obj;
         try {
             obj = new JSONObject(new String(data, StandardCharsets.US_ASCII));
-        } catch (JSONException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return;
         }
 
         try {
             UserStore.fromJSON(obj);
-        } catch (JSONException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
