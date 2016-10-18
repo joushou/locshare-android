@@ -194,6 +194,12 @@ public class UserListFragment extends ListFragment implements SwipeRefreshLayout
         for (int idx = 0; idx < adapter.values.size(); idx++) {
             UserListItem item = adapter.values.get(idx);
             User user = UserStore.getUser(item.uuid);
+            if (user == null) {
+                adapter.values.remove(idx);
+                idx--;
+                continue;
+            }
+
             Location loc = user.getLastLocation();
             if (loc == null) continue;
 
