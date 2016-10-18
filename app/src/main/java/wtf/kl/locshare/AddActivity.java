@@ -28,8 +28,8 @@ public class AddActivity extends Activity {
 
         protected void onPostExecute(Curve25519KeyPair _kp) {
             kp = _kp;
-            String privKey = Base64.encodeToString(kp.getPrivateKey(), Base64.URL_SAFE|Base64.NO_WRAP);
-            String pubKey = Base64.encodeToString(kp.getPublicKey(), Base64.URL_SAFE|Base64.NO_WRAP);
+            String privKey = Base64.encodeToString(kp.getPrivateKey(), Base64.NO_WRAP);
+            String pubKey = Base64.encodeToString(kp.getPublicKey(), Base64.NO_WRAP);
             ((TextView)findViewById(R.id.add_local_privkey)).setText(privKey);
             ((TextView)findViewById(R.id.add_local_pubkey)).setText(pubKey);
         }
@@ -80,7 +80,7 @@ public class AddActivity extends Activity {
                 byte[] pubKeyBytes;
 
                 try {
-                    pubKeyBytes = Base64.decode(pubKey, Base64.URL_SAFE | Base64.NO_WRAP);
+                    pubKeyBytes = Base64.decode(pubKey, Base64.NO_WRAP);
                 } catch (IllegalArgumentException e) {
                     Snackbar.make(findViewById(android.R.id.content), "Invalid remote public key", Snackbar.LENGTH_LONG)
                             .setActionTextColor(Color.RED)

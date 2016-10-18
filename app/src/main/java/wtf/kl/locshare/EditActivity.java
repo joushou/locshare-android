@@ -61,7 +61,7 @@ public class EditActivity extends Activity {
                 byte[] localPrivKeyBytes;
 
                 try {
-                    localPrivKeyBytes = Base64.decode(localPrivKey, Base64.URL_SAFE | Base64.NO_WRAP);
+                    localPrivKeyBytes = Base64.decode(localPrivKey, Base64.NO_WRAP);
                     if (localPrivKeyBytes == null || localPrivKeyBytes.length != 32) {
                         Snackbar.make(findViewById(android.R.id.content), "Invalid private key", Snackbar.LENGTH_LONG)
                                 .setActionTextColor(Color.RED)
@@ -80,7 +80,7 @@ public class EditActivity extends Activity {
                 byte[] remotePubKeyBytes;
 
                 try {
-                    remotePubKeyBytes = Base64.decode(remotePubKey, Base64.URL_SAFE | Base64.NO_WRAP);
+                    remotePubKeyBytes = Base64.decode(remotePubKey, Base64.NO_WRAP);
                     if (remotePubKeyBytes == null || remotePubKeyBytes.length != 32) {
                         Snackbar.make(findViewById(android.R.id.content), "Invalid remote public key", Snackbar.LENGTH_LONG)
                                 .setActionTextColor(Color.RED)
@@ -137,7 +137,6 @@ public class EditActivity extends Activity {
             return;
         }
 
-
         EditText name = (EditText) findViewById(R.id.edit_name);
         EditText remotePubKey = (EditText) findViewById(R.id.edit_remote_pubkey);
         EditText localPrivKey = (EditText) findViewById(R.id.edit_local_privkey);
@@ -162,7 +161,7 @@ public class EditActivity extends Activity {
             {
                 byte[] localPrivKeyBytes;
                 try {
-                    localPrivKeyBytes = Base64.decode(s.toString(), Base64.URL_SAFE | Base64.NO_WRAP);
+                    localPrivKeyBytes = Base64.decode(s.toString(), Base64.NO_WRAP);
                     if (localPrivKeyBytes == null || localPrivKeyBytes.length != 32) {
                         return;
                     }
@@ -173,7 +172,7 @@ public class EditActivity extends Activity {
                 byte[] localPubKeyBytes = CryptoManager.calculatePublicKey(localPrivKeyBytes);
 
 
-                String localPubKeyStr = Base64.encodeToString(localPubKeyBytes, Base64.URL_SAFE | Base64.NO_WRAP);
+                String localPubKeyStr = Base64.encodeToString(localPubKeyBytes, Base64.NO_WRAP);
                 TextView localPubKey = (TextView) findViewById(R.id.edit_local_pubkey);
                 localPubKey.setText(localPubKeyStr);
             }

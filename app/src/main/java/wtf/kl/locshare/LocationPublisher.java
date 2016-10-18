@@ -79,7 +79,7 @@ public class LocationPublisher extends Service implements GoogleApiClient.Connec
                             continue;
 
                         byte[] p = CryptoManager.encryptWithCurve25519PublicKey(msg, user.remotePubKey);
-                        String data = Base64.encodeToString(p, Base64.NO_WRAP | Base64.URL_SAFE);
+                        String data = Base64.encodeToString(p, Base64.NO_WRAP);
                         os.write(String.format("pub %s %s\n", user.remoteAsBase64(), data));
                     }
 

@@ -62,7 +62,7 @@ class LocationSubscriber {
 
                     String uuid = parts[0];
                     String encMsg = parts[1];
-                    byte[] rawMsg = Base64.decode(encMsg, Base64.NO_WRAP | Base64.URL_SAFE);
+                    byte[] rawMsg = Base64.decode(encMsg, Base64.NO_WRAP);
 
                     User user = UserStore.getUser(uuid);
                     if (user == null) {

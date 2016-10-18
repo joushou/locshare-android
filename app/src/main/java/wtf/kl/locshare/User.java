@@ -31,15 +31,15 @@ class User {
     }
 
     String localAsBase64() {
-        return Base64.encodeToString(localPubKey, Base64.URL_SAFE|Base64.NO_WRAP);
+        return Base64.encodeToString(localPubKey,Base64.NO_WRAP);
     }
 
     String localPrivAsBase64() {
-        return Base64.encodeToString(localPrivKey, Base64.URL_SAFE|Base64.NO_WRAP);
+        return Base64.encodeToString(localPrivKey, Base64.NO_WRAP);
     }
 
     String remoteAsBase64() {
-        return Base64.encodeToString(remotePubKey, Base64.URL_SAFE|Base64.NO_WRAP);
+        return Base64.encodeToString(remotePubKey, Base64.NO_WRAP);
     }
 
     void setCap(int i) {
@@ -95,11 +95,11 @@ class User {
         synchronized(this) {
             obj.put("uuid", uuid);
             obj.put("name", name);
-            String b64priv = Base64.encodeToString(localPrivKey, Base64.NO_WRAP | Base64.URL_SAFE);
+            String b64priv = Base64.encodeToString(localPrivKey, Base64.NO_WRAP);
             obj.put("localPrivKey", b64priv);
-            String b64pub = Base64.encodeToString(localPubKey, Base64.NO_WRAP | Base64.URL_SAFE);
+            String b64pub = Base64.encodeToString(localPubKey, Base64.NO_WRAP);
             obj.put("localPubKey", b64pub);
-            String b64remote = Base64.encodeToString(remotePubKey, Base64.NO_WRAP | Base64.URL_SAFE);
+            String b64remote = Base64.encodeToString(remotePubKey, Base64.NO_WRAP);
             obj.put("remotePubKey", b64remote);
 
             for (Location location : locations) {
@@ -118,9 +118,9 @@ class User {
         User user = new User();
         user.uuid = obj.getString("uuid");
         user.name = obj.getString("name");
-        user.localPrivKey = Base64.decode(obj.getString("localPrivKey"), Base64.NO_WRAP | Base64.URL_SAFE);
-        user.localPubKey = Base64.decode(obj.getString("localPubKey"), Base64.NO_WRAP | Base64.URL_SAFE);
-        user.remotePubKey = Base64.decode(obj.getString("remotePubKey"), Base64.NO_WRAP | Base64.URL_SAFE);
+        user.localPrivKey = Base64.decode(obj.getString("localPrivKey"), Base64.NO_WRAP);
+        user.localPubKey = Base64.decode(obj.getString("localPubKey"), Base64.NO_WRAP);
+        user.remotePubKey = Base64.decode(obj.getString("remotePubKey"), Base64.NO_WRAP);
 
         JSONArray arr = obj.getJSONArray("locations");
         for (int i = 0; i < arr.length(); i++) {
