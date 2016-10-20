@@ -13,15 +13,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toolbar;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity implements SharedPreferences.OnSharedPreferenceChangeListener {
     public static final String REQUEST_LOCATION_PERMISSIONS = "wtf.kl.locshare.REQUEST_LOCATION_PERMISSIONS";
@@ -44,79 +36,6 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
         }
     }
 
-    private void storeUsers() {
-        File file = new File(getFilesDir(), "users");
-        try {
-            file.createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
-
-        FileOutputStream fos;
-        try {
-            fos = new FileOutputStream(file, false);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            return;
-        }
-
-        JSONObject obj;
-        try {
-            obj = UserStore.toJSON();
-        } catch (Exception e) {
-            e.printStackTrace();
-            try {
-                fos.close();
-            } catch (IOException x) {
-                // PASS
-            }
-            return;
-        }
-
-        byte[] b = obj.toString().getBytes(StandardCharsets.US_ASCII);
-
-        try {
-            fos.write(b);
-            fos.flush();
-            fos.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void loadUsers() {
-        File file = new File(getFilesDir(), "users");
-        FileInputStream fis;
-        try {
-            fis = new FileInputStream(file);
-        } catch (FileNotFoundException e) {
-            return;
-        }
-
-        byte[] data = new byte[(int)file.length()];
-        try {
-            fis.read(data);
-            fis.close();
-        } catch (IOException e) {
-            return;
-        }
-
-        JSONObject obj;
-        try {
-            obj = new JSONObject(new String(data, StandardCharsets.US_ASCII));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
-
-        try {
-            UserStore.fromJSON(obj);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         switch (key) {
             case "share_location":
@@ -135,17 +54,22 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
         sp.unregisterOnSharedPreferenceChangeListener(this);
         sp.registerOnSharedPreferenceChangeListener(this);
 
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.main_toolbar);
         setActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.main_fab);
         fab.setOnClickListener(view -> {
             Intent intent = new Intent(MainActivity.this, AddActivity.class);
             startActivity(intent);
         });
 
-        if (UserStore.isEmpty())
-            loadUsers();
+        if (UserStore.isEmpty()) {
+            try {
+                UserStore.readFromFile(new File(getFilesDir(), "users"));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
 
         Intent intent = getIntent();
         if (intent.getAction().equals(REQUEST_LOCATION_PERMISSIONS)) {
@@ -161,7 +85,12 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
 
     @Override
     protected void onPause() {
-        storeUsers();
+        try {
+            UserStore.writeToFile(new File(getFilesDir(), "users"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         super.onPause();
     }
 
