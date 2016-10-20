@@ -108,8 +108,6 @@ class User {
             obj.put("locations", arr);
         }
 
-        // TODO(kl): serialize locations as JSON.
-
         return obj;
     }
 
