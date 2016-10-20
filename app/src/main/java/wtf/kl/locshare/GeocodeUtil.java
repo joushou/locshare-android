@@ -23,12 +23,15 @@ class GeocodeUtil {
         final String key;
         final Location location;
         final int[] types;
+        private Object tag;
 
         Request(String key, Location location, int[] types) {
             this.key = key;
             this.location = location;
             this.types = types;
         }
+
+        void setTag(Object tag) { this.tag = tag; }
     }
 
     static class Response {
@@ -41,15 +44,18 @@ class GeocodeUtil {
         Location location;
         Result[] results;
         boolean success;
+        private Object tag;
 
         Response() {
             success = false;
         }
+
+        Object getTag() { return this.tag; }
     }
 
     static class GeocoderTask extends AsyncTask<Request, Void, Response[]> {
-        final Context context;
-        final Callback callback;
+        private final Context context;
+        private final Callback callback;
 
         GeocoderTask(Context context, Callback callback) {
             this.context = context;
@@ -141,6 +147,7 @@ class GeocodeUtil {
                 ar[idx] = resp;
                 resp.key = r.key;
                 resp.location = r.location;
+                resp.tag = r.tag;
 
                 try {
                     List<Address> addresses = gcd.getFromLocation(r.location.getLatitude(), r.location.getLongitude(), 1);
