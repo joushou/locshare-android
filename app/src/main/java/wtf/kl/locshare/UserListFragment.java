@@ -1,20 +1,21 @@
 package wtf.kl.locshare;
 
-import android.app.ListFragment;
+import android.app.Fragment;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.annotation.NonNull;
 import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.ListView;
 import android.widget.TextView;
 
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -30,77 +31,28 @@ import java.util.Set;
 
 import static java.lang.Math.abs;
 
-class UserListAdapter extends ArrayAdapter<UserListItem> {
-    private static class ViewHolder {
-        TextView nameView;
-        TextView locView;
-        TextView distView;
-        TextView timeView;
-    }
-    private final Context context;
-    final ArrayList<UserListItem> values;
-
-    UserListAdapter(Context context, ArrayList<UserListItem> values) {
-        super(context, R.layout.main_rowlayout, values);
-        this.context = context;
-        this.values = values;
-    }
-
-    @NonNull
-    @Override
-    public View getView(int position, View convertView, @NonNull ViewGroup parent) {
-
-        ViewHolder viewHolder;
-
-        if (convertView == null) {
-            LayoutInflater inflater = (LayoutInflater) context
-                    .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            convertView = inflater.inflate(R.layout.main_rowlayout, parent, false);
-
-            viewHolder = new ViewHolder();
-            viewHolder.nameView = (TextView) convertView.findViewById(R.id.userlist_name);
-            viewHolder.locView = (TextView) convertView.findViewById(R.id.userlist_location);
-            viewHolder.distView = (TextView) convertView.findViewById(R.id.userlist_distance);
-            viewHolder.timeView = (TextView) convertView.findViewById(R.id.userlist_time);
-
-            convertView.setTag(viewHolder);
-        } else {
-            viewHolder = (ViewHolder) convertView.getTag();
-        }
-
-        UserListItem u = values.get(position);
-        if (u != null) {
-            viewHolder.nameView.setText(u.name);
-            viewHolder.locView.setText(u.getLocationString());
-            viewHolder.distView.setText(u.getDistanceString());
-            viewHolder.timeView.setText(u.getTimeString());
-        }
-
-        return convertView;
-    }
-}
-
 class UserListItem {
-    final String name;
-    final String uuid;
-    private Location location;
-
-    private String locationString;
+    final User user;
+    Location location;
     private double distance;
+    private String locationString;
 
-    UserListItem(String uuid, String name) {
-        this.uuid = uuid;
-        this.name = name;
-    }
+    UserListItem(User user) { this.user = user; }
 
-    boolean updateLocation(Location loc, double distance) {
-        boolean needUpdate = locationString == null ||
-                location == null ||
-                location.getAccuracy() <= loc.getAccuracy() * 1.5 ||
-                location.distanceTo(loc) < 10;
+    boolean updateLocationFrom(Location loc) {
+        Location newLocation = user.getLastLocation();
+        boolean needUpdate = newLocation != null && (
+                location != null ||
+                locationString == null ||
+                location.getAccuracy() <= newLocation.getAccuracy() * 1.5 ||
+                location.distanceTo(newLocation) < 10);
 
-        this.location = loc;
-        this.distance = distance;
+        this.location = newLocation;
+        if (loc != null && newLocation != null) {
+            this.distance = loc.distanceTo(newLocation);
+        } else {
+            this.distance = Double.NaN;
+        }
 
         return needUpdate;
     }
@@ -156,11 +108,118 @@ class UserListItem {
     }
 }
 
+class SimpleDividerItemDecoration extends RecyclerView.ItemDecoration {
+    private Drawable mDivider;
+
+    public SimpleDividerItemDecoration(Context context) {
+        mDivider = context.getResources().getDrawable(R.drawable.line_divider);
+    }
+
+    @Override
+    public void onDrawOver(Canvas c, RecyclerView parent, RecyclerView.State state) {
+        int left = parent.getPaddingLeft();
+        int right = parent.getWidth() - parent.getPaddingRight();
+
+        int childCount = parent.getChildCount();
+        for (int i = 0; i < childCount; i++) {
+            View child = parent.getChildAt(i);
+
+            RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) child.getLayoutParams();
+
+            int top = child.getBottom() + params.bottomMargin;
+            int bottom = top + mDivider.getIntrinsicHeight();
+
+            mDivider.setBounds(left, top, right, bottom);
+            mDivider.draw(c);
+        }
+    }
+}
+
+class UserListAdapter extends RecyclerView.Adapter<UserListAdapter.ViewHolder> {
+    private String[] indexTable;
+    final private Map<String, UserListItem> values;
+
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        final TextView nameView;
+        final TextView locView;
+        final TextView distView;
+        final TextView timeView;
+        UserListItem item;
+
+        void onClick(View v) {
+            if (item.user == null) return;
+
+            Context context = v.getContext();
+            Intent intent = new Intent(context, MapActivity.class);
+            intent.putExtra("uuid", item.user.uuid);
+            context.startActivity(intent);
+        }
+
+        ViewHolder(View v) {
+            super(v);
+            nameView = (TextView) v.findViewById(R.id.userlist_name);
+            locView = (TextView) v.findViewById(R.id.userlist_location);
+            distView = (TextView) v.findViewById(R.id.userlist_distance);
+            timeView = (TextView) v.findViewById(R.id.userlist_time);
+            v.setOnClickListener(this::onClick);
+        }
+    }
+
+    UserListAdapter() {
+        values = new HashMap<>();
+        rebuildList();
+    }
+
+    void rebuildList() {
+        values.clear();
+        Set<String> userKeys = UserStore.getUserKeys();
+        String[] keysarr = new String[userKeys.size()];
+        keysarr = userKeys.toArray(keysarr);
+        Arrays.sort(keysarr);
+        indexTable = keysarr;
+
+        for (String key : keysarr) {
+            User user = UserStore.getUser(key);
+            UserListItem ul = new UserListItem(user);
+            values.put(user.uuid, ul);
+        }
+    }
+
+    @Override
+    public UserListAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        // create a new view
+        View v = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.rowlayout_userlist, parent, false);
+        return new ViewHolder(v);
+    }
+
+    UserListItem getItem(int position) {
+        return values.get(indexTable[position]);
+    }
+
+    @Override
+    public void onBindViewHolder(ViewHolder holder, int position) {
+        UserListItem item = getItem(position);
+        if (item == null) return;
+
+        holder.nameView.setText(item.user.name);
+        holder.locView.setText(item.getLocationString());
+        holder.distView.setText(item.getDistanceString());
+        holder.timeView.setText(item.getTimeString());
+        holder.item = item;
+    }
+
+    @Override
+    public int getItemCount() {
+        return values.size();
+    }
+}
+
 /**
  * A placeholder fragment containing a simple view.
  */
-public class UserListFragment extends ListFragment implements SwipeRefreshLayout.OnRefreshListener, GoogleApiClient.ConnectionCallbacks {
-    SwipeRefreshLayout swipeRefreshLayout;
+public class UserListFragment extends Fragment implements SwipeRefreshLayout.OnRefreshListener, GoogleApiClient.ConnectionCallbacks {
+    private SwipeRefreshLayout swipeRefreshLayout;
     private GoogleApiClient googleApiClient = null;
     private UserListAdapter adapter = null;
     private GeocodeUtil.GeocoderTask geocoderTask = null;
@@ -188,30 +247,15 @@ public class UserListFragment extends ListFragment implements SwipeRefreshLayout
             }
         }
 
-        Map<String, Integer> uuidToIndex = new HashMap<>();
         ArrayList<GeocodeUtil.Request> reqs = new ArrayList<>();
 
-        for (int idx = 0; idx < adapter.values.size(); idx++) {
-            UserListItem item = adapter.values.get(idx);
-            User user = UserStore.getUser(item.uuid);
-            if (user == null) {
-                adapter.values.remove(idx);
-                idx--;
+        for (int idx = 0; idx < adapter.getItemCount(); idx++) {
+            UserListItem item = adapter.getItem(idx);
+            if (!item.updateLocationFrom(location))
                 continue;
-            }
 
-            Location loc = user.getLastLocation();
-            if (loc == null) continue;
-
-            double distance = Double.NaN;
-            if (location != null) {
-                distance = location.distanceTo(loc);
-            }
-
-            if(!item.updateLocation(loc, distance)) continue;
-
-            GeocodeUtil.Request req = new GeocodeUtil.Request(item.uuid, loc, new int[]{GeocodeUtil.ONE_LINE_SUMMARY});
-            uuidToIndex.put(item.uuid, idx);
+            GeocodeUtil.Request req = new GeocodeUtil.Request(item.user.uuid, item.location, new int[]{GeocodeUtil.ONE_LINE_SUMMARY});
+            req.setTag(item);
             reqs.add(req);
         }
 
@@ -224,12 +268,8 @@ public class UserListFragment extends ListFragment implements SwipeRefreshLayout
             swipeRefreshLayout.setRefreshing(false);
             geocoderTask = null;
 
-            if (resps.length == 0) return;
-
-
             for (GeocodeUtil.Response resp : resps) {
-                int idx = uuidToIndex.get(resp.key);
-                UserListItem item = adapter.values.get(idx);
+                UserListItem item = (UserListItem) resp.getTag();
 
                 if (!resp.success) {
                     item.updateLocationString(null);
@@ -248,30 +288,21 @@ public class UserListFragment extends ListFragment implements SwipeRefreshLayout
         });
     }
 
-    private void makeList() {
-        adapter.clear();
-        Set<String> keys = UserStore.getUserKeys();
-        String[] keysarr = new String[keys.size()];
-        keys.toArray(keysarr);
-        Arrays.sort(keysarr);
-        for (String key : keysarr) {
-            User user = UserStore.getUser(key);
-            UserListItem ul = new UserListItem(user.uuid, user.name);
-            adapter.add(ul);
-        }
-    }
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        ArrayList<UserListItem> al = new ArrayList<>();
-        adapter = new UserListAdapter(getActivity(), al);
-        setListAdapter(adapter);
+        View view = inflater.inflate(R.layout.fragment_userlist, container, false);
 
-        View view = inflater.inflate(R.layout.fragment_main, container, false);
+        adapter = new UserListAdapter();
+        RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.userlist_recyclerview);
+        recyclerView.setHasFixedSize(true);
+        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getContext());
+        recyclerView.setLayoutManager(layoutManager);
+        recyclerView.setAdapter(adapter);
+        recyclerView.addItemDecoration(new SimpleDividerItemDecoration(getContext()));
 
-        swipeRefreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.fragment_main_swipe_refresh_layout);
+        swipeRefreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.userlist_swiperefreshlayout);
         swipeRefreshLayout.setOnRefreshListener(this);
 
         return view;
@@ -287,7 +318,7 @@ public class UserListFragment extends ListFragment implements SwipeRefreshLayout
                 geocoderTask.cancel(true);
                 geocoderTask = null;
             }
-            makeList();
+            adapter.rebuildList();
             onRefresh();
         }
 
@@ -327,17 +358,5 @@ public class UserListFragment extends ListFragment implements SwipeRefreshLayout
             googleApiClient.disconnect();
             googleApiClient = null;
         }
-    }
-
-    @Override
-    public void onListItemClick(ListView l, View v, int position, long id) {
-        UserListItem item = (UserListItem) getListAdapter().getItem(position);
-
-        Intent intent = new Intent(v.getContext(), MapActivity.class);
-        Bundle b = new Bundle();
-        b.putString("uuid", item.uuid);
-        intent.putExtras(b);
-
-        startActivity(intent);
     }
 }
