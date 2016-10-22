@@ -44,6 +44,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
     private BottomSheetBehavior<View> bottomSheetBehavior = null;
     private View bottomSheet = null;
     private final LocationSubscriber locationSubscriber = new LocationSubscriber();
+    private boolean mapInPlace = false;
 
 
     private void updateSheet() {
@@ -126,7 +127,12 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
         }
 
         map.addMarker(new MarkerOptions().position(ll).title(user.name));
-        map.moveCamera(CameraUpdateFactory.newLatLngZoom(ll, 15));
+        if (!mapInPlace) {
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(ll, 15));
+            mapInPlace = true;
+        } else {
+           map.animateCamera(CameraUpdateFactory.newLatLngZoom(ll, 15));
+        }
     }
 
     @Override
@@ -234,6 +240,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
 
         updateSheet();
 
+        mapInPlace = false;
         if (map == null) {
             MapFragment mapFragment =
                     (MapFragment) getFragmentManager().findFragmentById(R.id.map_fragment);
