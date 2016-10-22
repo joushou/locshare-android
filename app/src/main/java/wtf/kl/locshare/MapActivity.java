@@ -86,6 +86,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
             TextView addressView = (TextView) bottomSheet.findViewById(R.id.map_sheet_address);
 
             for (GeocodeUtil.Response.Result result : resp.results) {
+                if (result.lines == null) break;
                 switch (result.type) {
                     case GeocodeUtil.FULL_ADDRESS:
                         addressView.setText(result.lines[0]);
