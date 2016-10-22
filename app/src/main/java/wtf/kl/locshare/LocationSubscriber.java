@@ -73,12 +73,16 @@ class LocationSubscriber {
                         continue;
                     }
 
-                    byte[] p = CryptoManager.decryptWithCurve25519PrivateKey(rawMsg, privKey);
+                    try {
+                        byte[] p = CryptoManager.decryptWithCurve25519PrivateKey(rawMsg, privKey);
 
-                    Location location = LocationCodec.decode(p);
+                        Location location = LocationCodec.decode(p);
 
-                    user.addLocation(location);
-                    publishProgress(uuid);
+                        user.addLocation(location);
+                        publishProgress(uuid);
+                    } catch (IllegalArgumentException e) {
+                        // PASS
+                    }
                 }
                 os.close();
                 is.close();

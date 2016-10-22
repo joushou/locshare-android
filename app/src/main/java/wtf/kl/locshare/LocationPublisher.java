@@ -78,9 +78,13 @@ public class LocationPublisher extends Service implements GoogleApiClient.Connec
                         if (user.remotePubKey == null || user.remotePubKey.length != 32)
                             continue;
 
-                        byte[] p = CryptoManager.encryptWithCurve25519PublicKey(msg, user.remotePubKey);
-                        String data = Base64.encodeToString(p, Base64.NO_WRAP);
-                        os.write(String.format("pub %s %s\n", user.remoteAsBase64(), data));
+                        try {
+                            byte[] p = CryptoManager.encryptWithCurve25519PublicKey(msg, user.remotePubKey);
+                            String data = Base64.encodeToString(p, Base64.NO_WRAP);
+                            os.write(String.format("pub %s %s\n", user.remoteAsBase64(), data));
+                        } catch (IllegalArgumentException e) {
+                            // PASS
+                        }
                     }
 
                     os.flush();

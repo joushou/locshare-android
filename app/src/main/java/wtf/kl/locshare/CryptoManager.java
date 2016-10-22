@@ -13,7 +13,7 @@ class CryptoManager {
     private static final byte[] G = {9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     private static final Curve25519 cipher = Curve25519.getInstance(Curve25519.BEST);
 
-    static public byte[] encryptWithCurve25519PublicKey(byte[] plainText, byte[] publicKey) {
+    static public byte[] encryptWithCurve25519PublicKey(byte[] plainText, byte[] publicKey) throws IllegalArgumentException {
         // K_B = publicKey;
         // m = plainText;
 
@@ -38,7 +38,7 @@ class CryptoManager {
         }
 
         if (plainText.length > k_E.length) {
-            throw new AssertionError(String.format(Locale.ENGLISH, "plainText too long: %d > %d", plainText.length, k_E.length));
+            throw new IllegalArgumentException(String.format(Locale.ENGLISH, "plainText too long: %d > %d", plainText.length, k_E.length));
         }
 
         byte[] cipherText = new byte[r.length + plainText.length];
@@ -74,12 +74,15 @@ class CryptoManager {
             throw new AssertionError(String.format("Unexpected NoSuchAlgorithm exception: %s", e));
         }
 
-        // plainText = E(k_R;m)
-        byte[] plainText = new byte[c.length];
-        for (int i = 0; i < c.length; i++)
-            plainText[i] = (byte)(c[i] ^ k_E[i]);
+        if (c.length > k_E.length) {
+            throw new IllegalArgumentException(String.format(Locale.ENGLISH, "cipherText too long: %d > %d", c.length, k_E.length));
+        }
 
-        return plainText;
+        // plainText = E(k_R;m)
+        for (int i = 0; i < c.length; i++)
+            c[i] ^= k_E[i];
+
+        return c;
     }
 
     static public byte[] calculatePublicKey(byte[] privateKey) {
