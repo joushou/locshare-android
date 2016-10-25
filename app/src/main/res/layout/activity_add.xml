@@ -21,9 +21,7 @@
 
     </android.support.design.widget.AppBarLayout>
 
-    <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        xmlns:tools="http://schemas.android.com/tools"
+    <RelativeLayout
         android:id="@+id/content_add"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -35,65 +33,124 @@
         tools:context="wtf.kl.locshare.AddActivity"
         tools:showIn="@layout/activity_add">
 
-        <TextView
-            android:id="@+id/add_name_headline"
-            android:layout_width="match_parent"
+        <RelativeLayout
+            android:id="@+id/add_name_group"
             android:layout_height="wrap_content"
-            android:labelFor="@+id/add_name"
-            android:text="@string/label_name"/>
-        <EditText
-            android:id="@id/add_name"
-            android:inputType="text"
-            android:layout_width="match_parent"
+            android:layout_width="match_parent">
+            <TextView
+                android:id="@+id/add_name_headline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:labelFor="@+id/add_name"
+                android:text="@string/label_name"/>
+            <EditText
+                android:id="@id/add_name"
+                android:inputType="text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/add_name_headline"
+                android:textSize="16sp"
+                android:padding="12sp"/>
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/add_toggle_group"
             android:layout_height="wrap_content"
-            android:layout_below="@id/add_name_headline"
-            android:textSize="16sp"
-            android:padding="12sp"/>
-        <TextView
-            android:id="@+id/add_remote_pubkey_headline"
             android:layout_width="match_parent"
+            android:layout_below="@id/add_name_group"
+            android:layout_marginTop="24sp">
+            <RelativeLayout
+                android:id="@+id/add_publish_layout"
+                android:layout_height="wrap_content"
+                android:layout_width="match_parent">
+                <TextView
+                    android:id="@+id/add_publish_headline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_alignParentStart="true"
+                    android:labelFor="@+id/add_publish"
+                    android:text="@string/label_publish"/>
+                <Switch
+                    android:id="@id/add_publish"
+                    android:layout_height="wrap_content"
+                    android:layout_width="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:checked="true"/>
+            </RelativeLayout>
+            <RelativeLayout
+                android:id="@+id/add_subscribe_layout"
+                android:layout_height="wrap_content"
+                android:layout_width="match_parent"
+                android:layout_below="@id/add_publish_layout">
+                <TextView
+                    android:id="@+id/add_subscribe_headline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_alignParentStart="true"
+                    android:labelFor="@+id/add_subscribe"
+                    android:text="@string/label_subscribe"/>
+                <Switch
+                    android:id="@id/add_subscribe"
+                    android:layout_height="wrap_content"
+                    android:layout_width="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:checked="true"/>
+            </RelativeLayout>
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/add_key_group"
             android:layout_height="wrap_content"
-            android:layout_below="@id/add_name"
-            android:labelFor="@+id/add_remote_pubkey"
-            android:text="@string/label_remote_pubkey"/>
-        <EditText
-            android:id="@id/add_remote_pubkey"
-            android:inputType="text"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/add_remote_pubkey_headline"
-            android:textSize="16sp"
-            android:padding="12sp"/>
-        <TextView
-            android:id="@+id/add_local_privkey_headline"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/add_remote_pubkey"
-            android:labelFor="@+id/add_local_privkey"
-            android:text="@string/label_local_privkey"/>
-        <TextView
-            android:id="@id/add_local_privkey"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/add_local_privkey_headline"
-            android:textSize="16sp"
-            android:textIsSelectable="true"
-            android:padding="12sp"/>
-        <TextView
-            android:id="@+id/add_local_pubkey_headline"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/add_local_privkey"
-            android:labelFor="@+id/add_local_pubkey"
-            android:text="@string/label_local_pubkey"/>
-        <TextView
-            android:id="@id/add_local_pubkey"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/add_local_pubkey_headline"
-            android:textSize="16sp"
-            android:textIsSelectable="true"
-            android:padding="12sp"/>
+            android:layout_below="@id/add_toggle_group"
+            android:layout_marginTop="24sp">
+            <TextView
+                android:id="@+id/add_remote_pubkey_headline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:labelFor="@+id/add_remote_pubkey"
+                android:text="@string/label_remote_pubkey"/>
+            <EditText
+                android:id="@id/add_remote_pubkey"
+                android:inputType="text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/add_remote_pubkey_headline"
+                android:textSize="16sp"
+                android:padding="12sp"/>
+            <TextView
+                android:id="@+id/add_local_privkey_headline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/add_remote_pubkey"
+                android:labelFor="@+id/add_local_privkey"
+                android:text="@string/label_local_privkey"/>
+            <TextView
+                android:id="@id/add_local_privkey"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/add_local_privkey_headline"
+                android:textSize="16sp"
+                android:textIsSelectable="true"
+                android:padding="12sp"/>
+            <TextView
+                android:id="@+id/add_local_pubkey_headline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/add_local_privkey"
+                android:labelFor="@+id/add_local_pubkey"
+                android:text="@string/label_local_pubkey"/>
+            <TextView
+                android:id="@id/add_local_pubkey"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/add_local_pubkey_headline"
+                android:textSize="16sp"
+                android:textIsSelectable="true"
+                android:padding="12sp"/>
+        </RelativeLayout>
 
 
 

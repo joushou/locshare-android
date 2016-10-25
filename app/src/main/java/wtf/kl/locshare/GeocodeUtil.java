@@ -72,60 +72,85 @@ class GeocodeUtil {
         }
 
         private static String[] oneLineSummary(Address addr) {
-            String locationStr = "";
-
             String thoroughfare = addr.getThoroughfare();
             String sublocality = addr.getSubLocality();
             String locality = addr.getLocality();
+            String adminArea = addr.getAdminArea();
             String country = addr.getCountryName();
 
-            if (thoroughfare != null) {
-                locationStr += thoroughfare;
+            String[] res = new String[1];
+
+            if (thoroughfare != null && locality != null && country != null) {
+                res[0] = thoroughfare + ", " + locality + ", " + country;
+            } else if (sublocality != null && locality != null && country != null) {
+                res[0] = sublocality + ", " + locality + ", " + country;
+            } else if (thoroughfare != null && sublocality != null && country != null) {
+                res[0] = thoroughfare + ", " + sublocality + ", " + country;
+            } else if (locality != null && adminArea != null && country != null) {
+                res[0] = locality + ", " + adminArea + ", " + country;
+            } else if (thoroughfare != null && adminArea != null && country != null) {
+                res[0] = thoroughfare + ", " + adminArea + ", " + country;
+            } else if (thoroughfare != null && country != null) {
+                res[0] = thoroughfare + ", " + country;
+            } else if (sublocality != null && country != null) {
+                res[0] = sublocality + ", " + country;
+            } else if (locality != null && country != null) {
+                res[0] = locality + ", " + country;
+            } else if (adminArea != null && country != null) {
+                res[0] = adminArea + ", " + country;
+            } else if (country != null) {
+                res[0] = country;
+            } else {
+                return null;
             }
 
-            if (locality != null) {
-                if (!locationStr.isEmpty()) {
-                    locationStr += ", ";
-                }
-
-                if (sublocality != null)
-                    locationStr += sublocality + ", " + locality;
-                else
-                    locationStr += locality;
-            }
-
-            if (!locationStr.isEmpty()) {
-                locationStr += ", ";
-            }
-            locationStr += country;
-            return new String[]{locationStr};
+            return res;
         }
 
         private static String[] twoLineSummary(Address addr) {
             String thoroughfare = addr.getThoroughfare();
+            String sublocality = addr.getSubLocality();
             String locality = addr.getLocality();
             String adminArea = addr.getAdminArea();
             String country = addr.getCountryName();
 
             String[] res = new String[2];
 
-            if (thoroughfare != null && adminArea != null && locality != null && country != null) {
+            if (thoroughfare != null && sublocality != null && locality != null && adminArea != null && country != null) {
+                res[0] = thoroughfare + ", " + sublocality;
+                res[1] = locality + ", " + adminArea + ", " + country;
+            } else if (thoroughfare != null && sublocality != null && locality != null && country != null) {
+                res[0] = thoroughfare;
+                res[1] = sublocality + ", " + locality + ", " + ", " + country;
+            } else if (thoroughfare != null && sublocality != null && adminArea != null && country != null) {
+                res[0] = thoroughfare;
+                res[1] = sublocality + ", " + adminArea + ", " + ", " + country;
+            } else if (thoroughfare != null && locality != null && adminArea != null && country != null) {
                 res[0] = thoroughfare;
                 res[1] = locality + ", " + adminArea + ", " + country;
             } else if (thoroughfare != null && locality != null && country != null) {
                 res[0] = thoroughfare;
                 res[1] = locality + ", " + country;
+            } else if (sublocality != null && locality != null && country != null) {
+                res[0] = sublocality;
+                res[1] = locality + ", " + country;
+            } else if (thoroughfare != null && sublocality != null && country != null) {
+                res[0] = thoroughfare;
+                res[1] = sublocality + ", " + country;
             } else if (locality != null && adminArea != null && country != null) {
                 res[0] = locality;
                 res[1] = adminArea + ", " + country;
-            } else if (locality != null && country != null) {
-                res[0] = locality;
-                res[1] = country;
             } else if (thoroughfare != null && adminArea != null && country != null) {
                 res[0] = thoroughfare;
                 res[1] = adminArea + ", " + country;
             } else if (thoroughfare != null && country != null) {
                 res[0] = thoroughfare;
+                res[1] = country;
+            } else if (sublocality != null && country != null) {
+                res[0] = sublocality;
+                res[1] = country;
+            } else if (locality != null && country != null) {
+                res[0] = locality;
                 res[1] = country;
             } else if (adminArea != null && country != null) {
                 res[0] = adminArea;

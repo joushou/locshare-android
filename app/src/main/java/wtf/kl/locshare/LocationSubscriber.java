@@ -3,6 +3,7 @@ package wtf.kl.locshare;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.util.Base64;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -65,16 +66,12 @@ class LocationSubscriber {
                     byte[] rawMsg = Base64.decode(encMsg, Base64.NO_WRAP);
 
                     User user = UserStore.getUser(uuid);
-                    if (user == null) {
-                        continue;
-                    }
-                    byte[] privKey = user.localPrivKey;
-                    if (privKey == null) {
+                    if (user == null || !user.subscribe || user.localPrivKey == null || user.localPrivKey.length != 32) {
                         continue;
                     }
 
                     try {
-                        byte[] p = CryptoManager.decryptWithCurve25519PrivateKey(rawMsg, privKey);
+                        byte[] p = CryptoManager.decryptWithCurve25519PrivateKey(rawMsg, user.localPrivKey);
 
                         Location location = LocationCodec.decode(p);
 

@@ -15,6 +15,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toolbar;
 
@@ -50,6 +51,8 @@ public class EditActivity extends Activity {
                 String name = ((EditText)findViewById(R.id.edit_name)).getText().toString();
                 String localPrivKey = ((EditText)findViewById(R.id.edit_local_privkey)).getText().toString();
                 String remotePubKey = ((EditText)findViewById(R.id.edit_remote_pubkey)).getText().toString();
+                boolean publish = ((Switch)findViewById(R.id.edit_publish)).isChecked();
+                boolean subscribe = ((Switch)findViewById(R.id.edit_subscribe)).isChecked();
 
                 if (localPrivKey.isEmpty()) {
                     Snackbar.make(findViewById(android.R.id.content), "No private key set", Snackbar.LENGTH_LONG)
@@ -58,15 +61,26 @@ public class EditActivity extends Activity {
                     return false;
                 }
 
-                byte[] localPrivKeyBytes;
+                User user = UserStore.getUser(uuid);
+                String uuid = user.uuid;
+                byte[] localPrivKeyBytes = user.localPrivKey;
+                byte[] localPubKeyBytes = user.localPubKey;
+                byte[] remotePubKeyBytes = user.remotePubKey;
 
                 try {
-                    localPrivKeyBytes = Base64.decode(localPrivKey, Base64.NO_WRAP);
-                    if (localPrivKeyBytes == null || localPrivKeyBytes.length != 32) {
-                        Snackbar.make(findViewById(android.R.id.content), "Invalid private key", Snackbar.LENGTH_LONG)
-                                .setActionTextColor(Color.RED)
-                                .show();
-                        return false;
+                    byte[] p = Base64.decode(localPrivKey, Base64.NO_WRAP);
+
+                    if (subscribe || p != null) {
+                        if ((p == null) || (!(p.length == 0 && !subscribe) && p.length != 32)) {
+                            Snackbar.make(findViewById(android.R.id.content), "Invalid private key", Snackbar.LENGTH_LONG)
+                                    .setActionTextColor(Color.RED)
+                                    .show();
+                            return false;
+                        }
+
+                        localPrivKeyBytes = p;
+                        localPubKeyBytes = CryptoManager.calculatePublicKey(p);
+                        uuid = Base64.encodeToString(localPubKeyBytes, Base64.NO_WRAP);
                     }
                 } catch (IllegalArgumentException e) {
                     Snackbar.make(findViewById(android.R.id.content), "Invalid private key", Snackbar.LENGTH_LONG)
@@ -75,18 +89,19 @@ public class EditActivity extends Activity {
                     return false;
                 }
 
-                byte[] localPubKeyBytes = CryptoManager.calculatePublicKey(localPrivKeyBytes);
-
-                byte[] remotePubKeyBytes;
-
                 try {
-                    remotePubKeyBytes = Base64.decode(remotePubKey, Base64.NO_WRAP);
-                    if (remotePubKeyBytes == null || remotePubKeyBytes.length != 32) {
-                        Snackbar.make(findViewById(android.R.id.content), "Invalid remote public key", Snackbar.LENGTH_LONG)
-                                .setActionTextColor(Color.RED)
-                                .show();
-                        return false;
+                    byte[] p = Base64.decode(remotePubKey, Base64.NO_WRAP);
+
+                    if (publish || p != null) {
+                        if ((p == null) || (!(p.length == 0 && !publish) && p.length != 32)) {
+                            Snackbar.make(findViewById(android.R.id.content), "Invalid remote public key", Snackbar.LENGTH_LONG)
+                                    .setActionTextColor(Color.RED)
+                                    .show();
+                            return false;
+                        }
+                        remotePubKeyBytes = p;
                     }
+
                 } catch (IllegalArgumentException e) {
                     Snackbar.make(findViewById(android.R.id.content), "Invalid remote public key", Snackbar.LENGTH_LONG)
                             .setActionTextColor(Color.RED)
@@ -94,9 +109,13 @@ public class EditActivity extends Activity {
                     return false;
                 }
 
-                User user = new User(uuid, localPrivKeyBytes, localPubKeyBytes, remotePubKeyBytes, name);
+                User newUser = new User(uuid, name, publish, subscribe, localPrivKeyBytes,
+                        localPubKeyBytes, remotePubKeyBytes, user.cap);
 
-                UserStore.addUser(user);
+                newUser.setLocationArray(user.cloneLocationArray());
+
+                UserStore.delUser(user);
+                UserStore.addUser(newUser);
 
                 finish();
                 return false;
@@ -141,11 +160,15 @@ public class EditActivity extends Activity {
         EditText remotePubKey = (EditText) findViewById(R.id.edit_remote_pubkey);
         EditText localPrivKey = (EditText) findViewById(R.id.edit_local_privkey);
         TextView localPubKey = (TextView) findViewById(R.id.edit_local_pubkey);
+        Switch publish = (Switch) findViewById(R.id.edit_publish);
+        Switch subscribe = (Switch) findViewById(R.id.edit_subscribe);
 
         name.setText(user.name);
         remotePubKey.setText(user.remoteAsBase64());
         localPrivKey.setText(user.localPrivAsBase64());
         localPubKey.setText(user.localAsBase64());
+        publish.setChecked(user.publish);
+        subscribe.setChecked(user.subscribe);
 
         localPrivKey.addTextChangedListener(new TextWatcher() {
             @Override

@@ -39,6 +39,8 @@
     <string name="label_coordinates">Coordinates</string>
     <string name="label_address">Address</string>
     <string name="label_movement">Movement</string>
+    <string name="label_publish">Publish location</string>
+    <string name="label_subscribe">Subscribe to location updates</string>
 
 
     <string name="placeholder_unavailable">Unavailable</string>

@@ -11,39 +11,54 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 class User {
-    String uuid;
-    byte[] localPrivKey;
-    byte[] localPubKey;
-    byte[] remotePubKey;
-    int cap = 10;
-    String name;
+    final String uuid;
+    final byte[] localPrivKey;
+    final byte[] localPubKey;
+    final byte[] remotePubKey;
+    final String name;
+    final boolean publish;
+    final boolean subscribe;
+    final int cap;
 
-    private final ArrayList<Location> locations = new ArrayList<>();
+    private ArrayList<Location> locations = new ArrayList<>();
 
-    private User() {}
-
-    User(String uuid, byte[] localPrivKey, byte[] localPubKey, byte[] remotePubKey, String name) {
+    User(String uuid, String name, boolean publish, boolean subscribe, byte[] localPrivKey,
+         byte[] localPubKey, byte[] remotePubKey, int cap) {
         this.uuid = uuid;
+        this.name = name;
+        this.publish = publish;
+        this.subscribe = subscribe;
         this.localPrivKey = localPrivKey;
         this.localPubKey = localPubKey;
         this.remotePubKey = remotePubKey;
-        this.name = name;
+        this.cap = cap;
     }
 
     String localAsBase64() {
+        if (localPubKey == null) return "";
         return Base64.encodeToString(localPubKey,Base64.NO_WRAP);
     }
 
     String localPrivAsBase64() {
+        if (localPrivKey == null) return "";
         return Base64.encodeToString(localPrivKey, Base64.NO_WRAP);
     }
 
     String remoteAsBase64() {
+        if (remotePubKey == null) return "";
         return Base64.encodeToString(remotePubKey, Base64.NO_WRAP);
     }
 
-    void setCap(int i) {
-        cap = i;
+    void setLocationArray(ArrayList<Location> locations) {
+        synchronized (this) {
+            this.locations = locations;
+        }
+    }
+
+    ArrayList<Location> cloneLocationArray() {
+        synchronized (this) {
+            return new ArrayList<>(locations);
+        }
     }
 
     void addLocation(Location l) {
@@ -95,12 +110,15 @@ class User {
         synchronized(this) {
             obj.put("uuid", uuid);
             obj.put("name", name);
+            obj.put("publish", publish);
+            obj.put("subscribe", subscribe);
             String b64priv = Base64.encodeToString(localPrivKey, Base64.NO_WRAP);
             obj.put("localPrivKey", b64priv);
             String b64pub = Base64.encodeToString(localPubKey, Base64.NO_WRAP);
             obj.put("localPubKey", b64pub);
             String b64remote = Base64.encodeToString(remotePubKey, Base64.NO_WRAP);
             obj.put("remotePubKey", b64remote);
+            obj.put("cap", cap);
 
             for (Location location : locations) {
                 arr.put(LocationCodec.toJSON(location));
@@ -113,12 +131,16 @@ class User {
 
     @NonNull
     static User fromJSON(JSONObject obj) throws JSONException {
-        User user = new User();
-        user.uuid = obj.getString("uuid");
-        user.name = obj.getString("name");
-        user.localPrivKey = Base64.decode(obj.getString("localPrivKey"), Base64.NO_WRAP);
-        user.localPubKey = Base64.decode(obj.getString("localPubKey"), Base64.NO_WRAP);
-        user.remotePubKey = Base64.decode(obj.getString("remotePubKey"), Base64.NO_WRAP);
+        User user = new User(
+                obj.getString("uuid"),
+                obj.getString("name"),
+                obj.getBoolean("publish"),
+                obj.getBoolean("subscribe"),
+                Base64.decode(obj.getString("localPrivKey"), Base64.NO_WRAP),
+                Base64.decode(obj.getString("localPubKey"), Base64.NO_WRAP),
+                Base64.decode(obj.getString("remotePubKey"), Base64.NO_WRAP),
+                obj.getInt("cap")
+        );
 
         JSONArray arr = obj.getJSONArray("locations");
         for (int i = 0; i < arr.length(); i++) {

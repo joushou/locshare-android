@@ -12,6 +12,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toolbar;
 
@@ -19,7 +20,6 @@ import org.whispersystems.curve25519.Curve25519KeyPair;
 
 public class AddActivity extends Activity {
     private Curve25519KeyPair kp = null;
-    private boolean remotePubKeyWarned = false;
 
     private class KeyGenerator extends AsyncTask<Void, Void, Curve25519KeyPair> {
         protected Curve25519KeyPair doInBackground(Void... params) {
@@ -68,6 +68,8 @@ public class AddActivity extends Activity {
                 String name = ((TextView)findViewById(R.id.add_name)).getText().toString();
                 String pubKey = ((TextView)findViewById(R.id.add_remote_pubkey)).getText().toString();
                 String genPubKey = ((TextView)findViewById(R.id.add_local_pubkey)).getText().toString();
+                boolean publish = ((Switch)findViewById(R.id.add_publish)).isChecked();
+                boolean subscribe = ((Switch)findViewById(R.id.add_subscribe)).isChecked();
 
                 if (name.isEmpty()) {
                     Snackbar.make(findViewById(android.R.id.content), "No name set", Snackbar.LENGTH_LONG)
@@ -77,34 +79,37 @@ public class AddActivity extends Activity {
                     return false;
                 }
 
-                byte[] pubKeyBytes;
+                byte[] pubKeyBytes = null;
 
-                try {
-                    pubKeyBytes = Base64.decode(pubKey, Base64.NO_WRAP);
-                } catch (IllegalArgumentException e) {
-                    Snackbar.make(findViewById(android.R.id.content), "Invalid remote public key", Snackbar.LENGTH_LONG)
-                            .setActionTextColor(Color.RED)
-                            .show();
+                if (publish) {
+                    try {
+                        pubKeyBytes = Base64.decode(pubKey, Base64.NO_WRAP);
+                    } catch (IllegalArgumentException e) {
+                        Snackbar.make(findViewById(android.R.id.content), "Invalid remote public key", Snackbar.LENGTH_LONG)
+                                .setActionTextColor(Color.RED)
+                                .show();
 
-                    return false;
+                        return false;
+                    }
+
+                    if (pubKeyBytes == null || pubKeyBytes.length == 0) {
+                        Snackbar.make(findViewById(android.R.id.content), "No remote public key", Snackbar.LENGTH_LONG)
+                                .setActionTextColor(Color.RED)
+                                .show();
+                        return false;
+                    }
+
+                    if (pubKeyBytes.length != 32) {
+                        Snackbar.make(findViewById(android.R.id.content), "Invalid remote public key", Snackbar.LENGTH_LONG)
+                                .setActionTextColor(Color.RED)
+                                .show();
+                        return false;
+                    }
                 }
 
-                if (!remotePubKeyWarned && (pubKeyBytes == null || pubKeyBytes.length == 0)) {
-                    Snackbar.make(findViewById(android.R.id.content), "No remote public key", Snackbar.LENGTH_LONG)
-                            .setActionTextColor(Color.RED)
-                            .show();
-                    remotePubKeyWarned = true;
-                    return false;
-                }
 
-                if (pubKeyBytes != null && pubKeyBytes.length != 0 && pubKeyBytes.length != 32) {
-                    Snackbar.make(findViewById(android.R.id.content), "Invalid remote public key", Snackbar.LENGTH_LONG)
-                            .setActionTextColor(Color.RED)
-                            .show();
-                    return false;
-                }
-
-                User user = new User(genPubKey, kp.getPrivateKey(), kp.getPublicKey(), pubKeyBytes, name);
+                User user = new User(genPubKey, name, publish, subscribe, kp.getPrivateKey(),
+                        kp.getPublicKey(), pubKeyBytes, 10);
                 UserStore.addUser(user);
 
                 finish();

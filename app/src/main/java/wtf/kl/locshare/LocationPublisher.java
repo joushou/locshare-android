@@ -75,7 +75,7 @@ public class LocationPublisher extends Service implements GoogleApiClient.Connec
 
                     for (String key : keys) {
                         User user = UserStore.getUser(key);
-                        if (user.remotePubKey == null || user.remotePubKey.length != 32)
+                        if (user == null || !user.publish || user.remotePubKey == null || user.remotePubKey.length != 32)
                             continue;
 
                         try {
@@ -125,7 +125,7 @@ public class LocationPublisher extends Service implements GoogleApiClient.Connec
         }
     }
 
-    public void registerLocationWatcher() {
+    private void registerLocationWatcher() {
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
         boolean shareLocation = sp.getBoolean("share_location", true);
 
@@ -241,7 +241,7 @@ public class LocationPublisher extends Service implements GoogleApiClient.Connec
         return action != null && action.equals(START_LOCATION_SERVICE);
     }
 
-    public boolean isInternetAvailable() {
+    private boolean isInternetAvailable() {
         ConnectivityManager connectivityManager
                 = (ConnectivityManager) (getSystemService(Context.CONNECTIVITY_SERVICE));
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
