@@ -180,10 +180,10 @@ class UserStore {
     // but should be done by creating a new store that replaces the old. This is done under the
     // assumption that UserStore will be read orders of magnitude more often than it is written,
     // making lock-free reading with the significantly slower writes. Writes are synchronized among
-    // eachother to ensure proper behaviour.
+    // each other to ensure proper behaviour.
     private static volatile Store store = new Store();
 
-    private static ArrayList<UpdateListener> cbs = new ArrayList<>();
+    private static final ArrayList<UpdateListener> cbs = new ArrayList<>();
 
     static Set<String> getUserKeys() { return store.users.keySet(); }
     static int size() { return store.users.size(); }

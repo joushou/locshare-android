@@ -351,11 +351,6 @@ public class UserListFragment extends Fragment implements GoogleApiClient.Connec
 
         googleApiClient.connect();
 
-        Set<String> keySet = UserStore.getUserKeys();
-        String[] keys = new String[keySet.size()];
-        keys = keySet.toArray(keys);
-
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getContext());
         UserStore.addUpdateListener(this);
         try {
             Client.subscribe();

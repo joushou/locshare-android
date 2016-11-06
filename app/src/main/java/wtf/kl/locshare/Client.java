@@ -83,7 +83,7 @@ class Client {
         }
     }
 
-    private static ClientInstance instance = new ClientInstance();
+    private static final ClientInstance instance = new ClientInstance();
 
     private static final MediaType JSON
             = MediaType.parse("application/json; charset=utf-8");

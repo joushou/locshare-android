@@ -252,7 +252,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
             updateMarkers();
         }
 
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
         UserStore.addUpdateListener(this);
         try {
             Client.subscribe();

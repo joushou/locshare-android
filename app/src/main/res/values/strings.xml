@@ -17,7 +17,6 @@
     <string name="pref_title_share_movement">Share movement</string>
     <string name="pref_title_precision">Precision</string>
     <string name="pref_title_server_address">Server address</string>
-    <string name="pref_title_server_port">Server port</string>
     <string name="pref_title_max_update_interval">Shortest update interval</string>
     <string name="pref_title_update_interval">Update interval</string>
 
