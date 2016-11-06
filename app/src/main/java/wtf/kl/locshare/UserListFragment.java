@@ -154,7 +154,7 @@ class UserListAdapter extends RecyclerView.Adapter<UserListAdapter.ViewHolder> {
 
             Context context = v.getContext();
             Intent intent = new Intent(context, MapActivity.class);
-            intent.putExtra("uuid", item.user.uuid);
+            intent.putExtra("username", item.user.username);
             context.startActivity(intent);
         }
 
@@ -190,7 +190,7 @@ class UserListAdapter extends RecyclerView.Adapter<UserListAdapter.ViewHolder> {
 
             User user = UserStore.getUser(key);
             UserListItem ul = new UserListItem(user);
-            values.put(user.uuid, ul);
+            values.put(user.username, ul);
         }
     }
 
@@ -239,11 +239,10 @@ class UserListAdapter extends RecyclerView.Adapter<UserListAdapter.ViewHolder> {
 /**
  * A placeholder fragment containing a simple view.
  */
-public class UserListFragment extends Fragment implements GoogleApiClient.ConnectionCallbacks, LocationListener {
+public class UserListFragment extends Fragment implements GoogleApiClient.ConnectionCallbacks, LocationListener, UserStore.UpdateListener {
     private final UserListAdapter adapter = new UserListAdapter();
     private long listVersion = 0;
 
-    private final LocationSubscriber locationSubscriber = new LocationSubscriber();
     private GoogleApiClient googleApiClient = null;
 
     private final Map<String, GeocodeUtil.GeocoderTask> geocoderTasks = new HashMap<>();
@@ -271,31 +270,31 @@ public class UserListFragment extends Fragment implements GoogleApiClient.Connec
     }
 
     private void removeLocationListener() {
-        if (!googleApiClient.isConnected())
+        if (googleApiClient == null || !googleApiClient.isConnected())
             return;
 
         LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, this);
     }
 
-    private void refreshSingle(String uuid) {
-        UserListItem item = adapter.getItem(uuid);
+    public void onUpdate(String username) {
+        UserListItem item = adapter.getItem(username);
         if (!item.updateLocation())
             return;
 
-        GeocodeUtil.GeocoderTask oldTask = geocoderTasks.get(uuid);
+        GeocodeUtil.GeocoderTask oldTask = geocoderTasks.get(username);
         if (oldTask != null) {
             oldTask.cancel(true);
-            geocoderTasks.remove(uuid);
+            geocoderTasks.remove(username);
         }
 
-        GeocodeUtil.Request req = new GeocodeUtil.Request(item.user.uuid, item.location,
+        GeocodeUtil.Request req = new GeocodeUtil.Request(item.user.username, item.location,
                 new int[]{GeocodeUtil.ONE_LINE_SUMMARY});
         GeocodeUtil.Request[] reqs = new GeocodeUtil.Request[]{req};
 
-        adapter.notifyItemChanged(adapter.getIndexForKey(uuid));
+        adapter.notifyItemChanged(adapter.getIndexForKey(username));
 
         GeocodeUtil.GeocoderTask task = GeocodeUtil.Geocode(getContext(), reqs, (resps) -> {
-            geocoderTasks.remove(uuid);
+            geocoderTasks.remove(username);
             for (GeocodeUtil.Response resp: resps) {
                 if (!resp.success) {
                     item.updateLocationString(null);
@@ -310,10 +309,10 @@ public class UserListFragment extends Fragment implements GoogleApiClient.Connec
                 }
             }
 
-            adapter.notifyItemChanged(adapter.getIndexForKey(uuid));
+            adapter.notifyItemChanged(adapter.getIndexForKey(username));
         });
 
-        geocoderTasks.put(uuid, task);
+        geocoderTasks.put(username, task);
     }
 
     public void onLocationChanged(Location location) {
@@ -357,11 +356,12 @@ public class UserListFragment extends Fragment implements GoogleApiClient.Connec
         keys = keySet.toArray(keys);
 
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getContext());
-        locationSubscriber.start(
-                sp.getString("server_address", ""),
-                sp.getInt("server_port", 0),
-                keys,
-                this::refreshSingle);
+        UserStore.addUpdateListener(this);
+        try {
+            Client.subscribe();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         updateTimes();
     }
@@ -376,7 +376,8 @@ public class UserListFragment extends Fragment implements GoogleApiClient.Connec
     public void onPause() {
         super.onPause();
         removeLocationListener();
-        locationSubscriber.stop();
+        UserStore.delUpdateListener(this);
+        Client.unsubscribe();
 
         if (googleApiClient != null) {
             googleApiClient.disconnect();

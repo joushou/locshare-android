@@ -35,7 +35,7 @@ import java.util.Locale;
 
 import static java.lang.Math.abs;
 
-public class MapActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks {
+public class MapActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, UserStore.UpdateListener {
     private GoogleApiClient googleApiClient = null;
     private User user = null;
     private Location location = null;
@@ -43,7 +43,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
     private GeocodeUtil.GeocoderTask geocoderTask = null;
     private BottomSheetBehavior<View> bottomSheetBehavior = null;
     private View bottomSheet = null;
-    private final LocationSubscriber locationSubscriber = new LocationSubscriber();
     private boolean mapInPlace = false;
 
 
@@ -74,7 +73,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
 
         updateMarkers();
 
-        GeocodeUtil.Request req = new GeocodeUtil.Request(user.uuid, location, new int[]{GeocodeUtil.TWO_LINE_SUMMARY, GeocodeUtil.FULL_ADDRESS});
+        GeocodeUtil.Request req = new GeocodeUtil.Request(user.username, location, new int[]{GeocodeUtil.TWO_LINE_SUMMARY, GeocodeUtil.FULL_ADDRESS});
 
         geocoderTask = GeocodeUtil.Geocode(this, new GeocodeUtil.Request[]{req}, (resps) -> {
             if (resps.length == 0) return;
@@ -164,8 +163,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
                 break;
 
             case R.id.action_edit:
-                Intent intent = new Intent(this, EditActivity.class);
-                intent.putExtra("uuid", user.uuid);
+                Intent intent = new Intent(this, EditUserActivity.class);
+                intent.putExtra("username", user.username);
 
                 startActivity(intent);
                 break;
@@ -173,6 +172,10 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
 
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public void onUpdate(String source) {
+        updateSheet();
     }
 
 
@@ -225,7 +228,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
             return;
         }
 
-        user = UserStore.getUser(b.getString("uuid"));
+        user = UserStore.getUser(b.getString("username"));
         location = user.getLastLocation();
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -250,12 +253,12 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
         }
 
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        locationSubscriber.start(
-                sp.getString("server_address", ""),
-                sp.getInt("server_port", 0),
-                new String[]{user.uuid},
-                (uuid) -> updateSheet());
-
+        UserStore.addUpdateListener(this);
+        try {
+            Client.subscribe();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private String distanceAsString(double distance) {
@@ -300,7 +303,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
     public void onPause() {
         super.onPause();
 
-        locationSubscriber.stop();
+        UserStore.delUpdateListener(this);
+        Client.unsubscribe();
 
         if (geocoderTask != null) {
             geocoderTask.cancel(true);

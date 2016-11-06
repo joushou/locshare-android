@@ -38,9 +38,10 @@
         android:background="@android:color/white"
         app:layout_behavior="android.support.design.widget.BottomSheetBehavior">
 
-        <RelativeLayout
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
             <RelativeLayout
                 android:layout_width="match_parent"
@@ -56,47 +57,44 @@
                     android:layout_centerVertical="true"
                     android:gravity="center_vertical"
                     android:maxLines="1"
-                    android:textSize="18sp"
-                    />
+                    android:textSize="18sp" />
 
-                <RelativeLayout
+                <LinearLayout
                     android:layout_height="wrap_content"
-                    android:layout_width="fill_parent"
-                    android:layout_toStartOf="@id/map_sheet_distance">
+                    android:layout_width="match_parent"
+                    android:layout_toStartOf="@id/map_sheet_distance"
+                    android:orientation="vertical">
                     <TextView
                         android:id="@+id/map_sheet_thoroughfare"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/placeholder_unavailable"
 
-                        android:paddingTop="16dp"
-                        android:paddingStart="16dp"
-                        android:paddingEnd="16dp"
-                        android:textSize="18sp"
-                        android:layout_alignParentTop="true" />
+                        android:paddingTop="@dimen/activity_vertical_margin"
+                        android:paddingStart="@dimen/activity_horizontal_margin"
+                        android:paddingEnd="@dimen/activity_horizontal_margin"
+                        android:textSize="18sp" />
 
                     <TextView
                         android:id="@+id/map_sheet_locality"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_below="@id/map_sheet_thoroughfare"
                         android:text="@string/placeholder_unavailable"
-                        android:paddingBottom="16dp"
-                        android:paddingStart="16dp"
-                        android:paddingEnd="16dp"
+                        android:paddingBottom="@dimen/activity_vertical_margin"
+                        android:paddingStart="@dimen/activity_horizontal_margin"
+                        android:paddingEnd="@dimen/activity_horizontal_margin"
                         android:textSize="14sp"/>
-                </RelativeLayout>
+                </LinearLayout>
 
             </RelativeLayout>
 
-            <RelativeLayout
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/map_sheet_peek"
-                android:padding="16dp">
+                android:padding="16dp"
+                android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/map_sheet_time_headline"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/label_time"
@@ -107,16 +105,13 @@
                     android:id="@+id/map_sheet_time"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@id/map_sheet_time_headline"
                     android:text="@string/placeholder_unavailable"
                     android:paddingBottom="16dp"
                     android:textIsSelectable="true"
                     android:textSize="16sp"/>
                 <TextView
-                    android:id="@+id/map_sheet_coordinates_headline"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@id/map_sheet_time"
                     android:text="@string/label_coordinates"
                     android:padding="0dp"
                     android:textIsSelectable="true"
@@ -125,16 +120,13 @@
                     android:id="@+id/map_sheet_coordinates"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@id/map_sheet_coordinates_headline"
                     android:text="@string/placeholder_unavailable"
                     android:paddingBottom="16dp"
                     android:textIsSelectable="true"
                     android:textSize="16sp"/>
                 <TextView
-                    android:id="@+id/map_sheet_address_headline"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@id/map_sheet_coordinates"
                     android:text="@string/label_address"
                     android:padding="0dp"
                     android:textSize="14sp" />
@@ -142,16 +134,13 @@
                     android:id="@+id/map_sheet_address"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@id/map_sheet_address_headline"
                     android:text="@string/placeholder_unavailable"
                     android:paddingBottom="16dp"
                     android:textIsSelectable="true"
                     android:textSize="16sp"/>
                 <TextView
-                    android:id="@+id/map_sheet_movement_headline"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@id/map_sheet_address"
                     android:text="@string/label_movement"
                     android:padding="0dp"
                     android:textSize="14sp" />
@@ -159,12 +148,11 @@
                     android:id="@+id/map_sheet_movement"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_below="@id/map_sheet_movement_headline"
                     android:text="@string/placeholder_unavailable"
                     android:paddingBottom="16dp"
                     android:textIsSelectable="true"
                     android:textSize="16sp"/>
-            </RelativeLayout>
-        </RelativeLayout>
+            </LinearLayout>
+        </LinearLayout>
     </android.support.v4.widget.NestedScrollView>
 </android.support.design.widget.CoordinatorLayout>

@@ -15,7 +15,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
-import android.util.Base64;
 import android.util.Log;
 
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -23,10 +22,6 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Set;
 
@@ -42,14 +37,10 @@ public class LocationPublisher extends Service implements GoogleApiClient.Connec
     private GoogleApiClient googleApiClient = null;
 
     private class PublisherArg {
-        final String host;
-        final int port;
         final boolean movement;
         final Location location;
 
-        PublisherArg(String host, int port, boolean movement, Location location) {
-            this.host = host;
-            this.port = port;
+        PublisherArg(boolean movement, Location location) {
             this.movement = movement;
             this.location = location;
         }
@@ -59,11 +50,7 @@ public class LocationPublisher extends Service implements GoogleApiClient.Connec
         @Override
         public Boolean doInBackground(PublisherArg ...params) {
             for (PublisherArg arg : params) {
-                Socket socket = null;
-                BufferedWriter os = null;
                 try {
-                    socket = new Socket(arg.host, arg.port);
-                    os = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
                     Set<String> keys = UserStore.getUserKeys();
 
@@ -78,39 +65,12 @@ public class LocationPublisher extends Service implements GoogleApiClient.Connec
                         if (user == null || !user.publish || user.remotePubKey == null || user.remotePubKey.length != 32)
                             continue;
 
-                        try {
-                            byte[] p = CryptoManager.encryptWithCurve25519PublicKey(msg, user.remotePubKey);
-                            String data = Base64.encodeToString(p, Base64.NO_WRAP);
-                            os.write(String.format("pub %s %s\n", user.remoteAsBase64(), data));
-                        } catch (IllegalArgumentException e) {
-                            // PASS
-                        }
+                        byte[] p = CryptoManager.encryptWithCurve25519PublicKey(msg, user.remotePubKey);
+                        Client.push(user.username, p);
                     }
-
-                    os.flush();
-                    os.close();
-                    socket.close();
-
-                    os = null;
-                    socket = null;
-
-                } catch (IOException e) {
-                    if (os != null) {
-                        try {
-                            os.close();
-                        } catch (IOException x) {
-                            // PASS
-                        }
-                    }
-                    if (socket != null) {
-                        try {
-                            socket.close();
-                        } catch (IOException x) {
-                            // PASS
-                        }
-                    }
-
-                    return false;
+                }  catch (Exception e) {
+                    e.printStackTrace();
+                    return true;
                 }
             }
 
@@ -222,8 +182,6 @@ public class LocationPublisher extends Service implements GoogleApiClient.Connec
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
 
         PublisherArg publisherArg = new PublisherArg(
-                sp.getString("server_address", ""),
-                sp.getInt("server_port", 0),
                 sp.getBoolean("share_movement", true),
                 location
         );

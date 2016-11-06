@@ -5,6 +5,7 @@ android {
     buildToolsVersion "24.0.3"
     defaultConfig {
         jackOptions {
+            additionalParameters("jack.incremental" : "true")
             enabled true
         }
         multiDexEnabled true
@@ -37,7 +38,10 @@ dependencies {
     compile 'com.android.support:support-v4:24.2.1'
     testCompile 'junit:junit:4.12'
 
-    compile 'org.whispersystems:curve25519-android:0.2.5'
     compile 'com.google.android.gms:play-services:9.6.1'
     compile 'com.google.maps.android:android-maps-utils:0.4.4'
+
+    compile 'com.squareup.okhttp3:okhttp:3.4.2'
+    compile 'org.whispersystems:curve25519-android:0.2.5'
+    compile 'com.neovisionaries:nv-websocket-client:1.30'
 }

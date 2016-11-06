@@ -4,9 +4,8 @@ import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
-import android.support.design.widget.Snackbar;
+import android.support.design.widget.TextInputLayout;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Base64;
@@ -17,14 +16,17 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.Toolbar;
 
-public class EditActivity extends Activity {
-    private String uuid = null;
+import java.io.IOException;
+
+public class EditUserActivity extends Activity {
+    private String username = null;
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_edit, menu);
+        getMenuInflater().inflate(R.menu.menu_edit_user, menu);
         return true;
     }
 
@@ -36,7 +38,7 @@ public class EditActivity extends Activity {
 
         switch (item.getItemId()) {
             case R.id.edit_done:
-                if (uuid == null || uuid.isEmpty()) {
+                if (username == null || username.isEmpty()) {
                     // This isn't supposed to happen!
                     finish();
                     return false;
@@ -48,21 +50,19 @@ public class EditActivity extends Activity {
                     imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
                 }
 
-                String name = ((EditText)findViewById(R.id.edit_name)).getText().toString();
                 String localPrivKey = ((EditText)findViewById(R.id.edit_local_privkey)).getText().toString();
                 String remotePubKey = ((EditText)findViewById(R.id.edit_remote_pubkey)).getText().toString();
                 boolean publish = ((Switch)findViewById(R.id.edit_publish)).isChecked();
                 boolean subscribe = ((Switch)findViewById(R.id.edit_subscribe)).isChecked();
 
                 if (localPrivKey.isEmpty()) {
-                    Snackbar.make(findViewById(android.R.id.content), "No private key set", Snackbar.LENGTH_LONG)
-                            .setActionTextColor(Color.RED)
-                            .show();
+                    TextInputLayout til = (TextInputLayout) findViewById(R.id.edit_local_privkey_layout);
+                    til.setErrorEnabled(true);
+                    til.setError("You need to enter a local private key");
                     return false;
                 }
 
-                User user = UserStore.getUser(uuid);
-                String uuid = user.uuid;
+                User user = UserStore.getUser(username);
                 byte[] localPrivKeyBytes = user.localPrivKey;
                 byte[] localPubKeyBytes = user.localPubKey;
                 byte[] remotePubKeyBytes = user.remotePubKey;
@@ -72,20 +72,19 @@ public class EditActivity extends Activity {
 
                     if (subscribe || p != null) {
                         if ((p == null) || (!(p.length == 0 && !subscribe) && p.length != 32)) {
-                            Snackbar.make(findViewById(android.R.id.content), "Invalid private key", Snackbar.LENGTH_LONG)
-                                    .setActionTextColor(Color.RED)
-                                    .show();
+                            TextInputLayout til = (TextInputLayout) findViewById(R.id.edit_local_privkey_layout);
+                            til.setErrorEnabled(true);
+                            til.setError("Invalid private key");
                             return false;
                         }
 
                         localPrivKeyBytes = p;
                         localPubKeyBytes = CryptoManager.calculatePublicKey(p);
-                        uuid = Base64.encodeToString(localPubKeyBytes, Base64.NO_WRAP);
                     }
                 } catch (IllegalArgumentException e) {
-                    Snackbar.make(findViewById(android.R.id.content), "Invalid private key", Snackbar.LENGTH_LONG)
-                            .setActionTextColor(Color.RED)
-                            .show();
+                    TextInputLayout til = (TextInputLayout) findViewById(R.id.edit_local_privkey_layout);
+                    til.setErrorEnabled(true);
+                    til.setError("Invalid private key");
                     return false;
                 }
 
@@ -94,22 +93,51 @@ public class EditActivity extends Activity {
 
                     if (publish || p != null) {
                         if ((p == null) || (!(p.length == 0 && !publish) && p.length != 32)) {
-                            Snackbar.make(findViewById(android.R.id.content), "Invalid remote public key", Snackbar.LENGTH_LONG)
-                                    .setActionTextColor(Color.RED)
-                                    .show();
+                            TextInputLayout til = (TextInputLayout) findViewById(R.id.edit_remote_pubkey_layout);
+                            til.setErrorEnabled(true);
+                            til.setError("Invalid remote public key");
                             return false;
                         }
                         remotePubKeyBytes = p;
                     }
 
                 } catch (IllegalArgumentException e) {
-                    Snackbar.make(findViewById(android.R.id.content), "Invalid remote public key", Snackbar.LENGTH_LONG)
-                            .setActionTextColor(Color.RED)
-                            .show();
+                    TextInputLayout til = (TextInputLayout) findViewById(R.id.edit_remote_pubkey_layout);
+                    til.setErrorEnabled(true);
+                    til.setError("Invalid remote public key");
                     return false;
                 }
 
-                User newUser = new User(uuid, name, publish, subscribe, localPrivKeyBytes,
+                String name;
+                try {
+                    name = Client.getName(username);
+                } catch (Client.AuthException e) {
+                    Toast toast = Toast.makeText(this, "Please log in to add users", Toast.LENGTH_SHORT);
+                    toast.show();
+                    return false;
+                } catch (Client.ClientException e) {
+                    e.printStackTrace();
+                    Toast toast = Toast.makeText(this, "Could not retrieve information about user", Toast.LENGTH_SHORT);
+                    toast.show();
+                    return false;
+                } catch (Client.ServerException e) {
+                    e.printStackTrace();
+                    Toast toast = Toast.makeText(this, "Server error occurred", Toast.LENGTH_SHORT);
+                    toast.show();
+                    return false;
+                } catch (IOException e) {
+                    Toast toast = Toast.makeText(this, "Network error occurred", Toast.LENGTH_SHORT);
+                    toast.show();
+                    return false;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Toast toast = Toast.makeText(this, "Unexpected error occurred", Toast.LENGTH_SHORT);
+                    toast.show();
+                    return false;
+                }
+
+
+                User newUser = new User(username, name, publish, subscribe, localPrivKeyBytes,
                         localPubKeyBytes, remotePubKeyBytes, user.cap);
 
                 newUser.setLocationArray(user.cloneLocationArray());
@@ -131,7 +159,7 @@ public class EditActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_edit);
+        setContentView(R.layout.activity_edit_user);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setActionBar(toolbar);
 
@@ -148,22 +176,22 @@ public class EditActivity extends Activity {
             return;
         }
 
-        uuid = extra.getString("uuid");
+        username = extra.getString("username");
 
-        User user = UserStore.getUser(uuid);
+        User user = UserStore.getUser(username);
         if (user == null) {
             finish();
             return;
         }
 
-        EditText name = (EditText) findViewById(R.id.edit_name);
+        TextView username = (TextView) findViewById(R.id.edit_username);
         EditText remotePubKey = (EditText) findViewById(R.id.edit_remote_pubkey);
         EditText localPrivKey = (EditText) findViewById(R.id.edit_local_privkey);
         TextView localPubKey = (TextView) findViewById(R.id.edit_local_pubkey);
         Switch publish = (Switch) findViewById(R.id.edit_publish);
         Switch subscribe = (Switch) findViewById(R.id.edit_subscribe);
 
-        name.setText(user.name);
+        username.setText(user.username);
         remotePubKey.setText(user.remoteAsBase64());
         localPrivKey.setText(user.localPrivAsBase64());
         localPubKey.setText(user.localAsBase64());

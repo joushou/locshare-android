@@ -12,6 +12,10 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBva0qWF17EQL3xEAGZu1-PnOy3ZtJsW6I" />
+
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name"
@@ -29,25 +33,30 @@
         <activity
             android:name=".MapActivity"
             android:label="@string/title_activity_map"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:parentActivityName=".MainActivity" />
-        <activity
-            android:name=".AddActivity"
-            android:label="@string/title_activity_add"
+            android:parentActivityName=".MainActivity"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name=".EditActivity"
-            android:label="Edit"
+            android:name=".AddUserActivity"
+            android:label="@string/title_activity_add_user"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".EditUserActivity"
+            android:label="@string/title_activity_edit_user"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".LoginActivity"
+            android:label="@string/title_activity_login"
             android:theme="@style/AppTheme.NoActionBar" />
 
+        <activity
+            android:name=".NewAccountActivity"
+            android:label="@string/title_activity_new_account"
+            android:theme="@style/AppTheme.NoActionBar" />
         <service
             android:name=".LocationPublisher"
             android:enabled="true"
             android:exported="false" />
 
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBva0qWF17EQL3xEAGZu1-PnOy3ZtJsW6I" />
     </application>
 
 </manifest>

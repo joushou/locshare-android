@@ -42,6 +42,10 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
                 Intent intent = new Intent(this, LocationPublisher.class);
                 intent.setAction(LocationPublisher.START_LOCATION_SERVICE);
                 startService(intent);
+                break;
+            case "server_url":
+                Client.setURL(sharedPreferences.getString(key, ""));
+                break;
         }
     }
 
@@ -59,7 +63,7 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.main_fab);
         fab.setOnClickListener(view -> {
-            Intent intent = new Intent(MainActivity.this, AddActivity.class);
+            Intent intent = new Intent(MainActivity.this, AddUserActivity.class);
             startActivity(intent);
         });
 
@@ -70,6 +74,10 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
                 e.printStackTrace();
             }
         }
+
+        Client.setToken(sp.getString("auth_token", ""));
+        Client.setUsername(sp.getString("auth_username", ""));
+        Client.setURL(sp.getString("server_url", ""));
 
         Intent intent = getIntent();
         if (intent.getAction().equals(REQUEST_LOCATION_PERMISSIONS)) {
@@ -106,10 +114,20 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
+        Intent intent;
         switch (item.getItemId()) {
             case R.id.action_settings:
-                Intent intent = new Intent(this, SettingsActivity.class);
+                intent = new Intent(this, SettingsActivity.class);
                 startActivity(intent);
+                break;
+            case R.id.action_login:
+                intent = new Intent(this, LoginActivity.class);
+                startActivity(intent);
+                break;
+            case R.id.action_create:
+                intent = new Intent(this, NewAccountActivity.class);
+                startActivity(intent);
+                break;
         }
 
         return super.onOptionsItemSelected(item);
