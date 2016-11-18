@@ -25,8 +25,10 @@ import com.google.android.gms.location.LocationServices;
 import java.util.ArrayList;
 import java.util.Set;
 
-public class LocationPublisher extends Service implements GoogleApiClient.ConnectionCallbacks {
-    private static final String TAG = "locshare/LocSer";
+import wtf.kl.locshare.crypto.Session;
+
+public class PublisherService extends Service implements GoogleApiClient.ConnectionCallbacks {
+    private static final String TAG = "locshare/publisher";
     public static final String START_LOCATION_SERVICE = "wtf.kl.locshare.START_LOCATION_SERVICE";
     public static final String NETWORK_NOTIFICATION = "wtf.kl.locshare.NETWORK_NOTIFICATION";
 
@@ -51,22 +53,27 @@ public class LocationPublisher extends Service implements GoogleApiClient.Connec
         public Boolean doInBackground(PublisherArg ...params) {
             for (PublisherArg arg : params) {
                 try {
+                    UsersStore users = Storage.getInstance().getUsersStore();
 
-                    Set<String> keys = UserStore.getUserKeys();
+                    Set<String> keys = users.getUserKeys();
 
                     if (!arg.movement) {
                         arg.location.setSpeed(0);
                         arg.location.setBearing(0);
                     }
+
                     byte[] msg = LocationCodec.encode(arg.location);
 
                     for (String key : keys) {
-                        User user = UserStore.getUser(key);
-                        if (user == null || !user.publish || user.remotePubKey == null || user.remotePubKey.length != 32)
+                        User user = users.getUser(key);
+                        if (key == null || !user.getPublish())
+                            continue;
+                        Session session = user.getSession();
+                        if (session == null)
                             continue;
 
-                        byte[] p = CryptoManager.encryptWithCurve25519PublicKey(msg, user.remotePubKey);
-                        Client.push(user.username, p);
+                        byte[] p = session.encrypt(msg);
+                        Client.push(key, p);
                     }
                 }  catch (Exception e) {
                     e.printStackTrace();
@@ -121,7 +128,7 @@ public class LocationPublisher extends Service implements GoogleApiClient.Connec
                 .setInterval(interval)
                 .setSmallestDisplacement(25);
 
-        Intent intent = new Intent(this, LocationPublisher.class);
+        Intent intent = new Intent(this, PublisherService.class);
         pendingLocationIntent = PendingIntent.getService(this, 0, intent, 0);
 
         LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, pendingLocationIntent);
@@ -147,7 +154,7 @@ public class LocationPublisher extends Service implements GoogleApiClient.Connec
         ConnectivityManager cm =
                 (ConnectivityManager)this.getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        Intent intent = new Intent(this, LocationPublisher.class);
+        Intent intent = new Intent(this, PublisherService.class);
         intent.setAction(NETWORK_NOTIFICATION);
         pendingNetworkIntent = PendingIntent.getService(this, 0, intent, 0);
 

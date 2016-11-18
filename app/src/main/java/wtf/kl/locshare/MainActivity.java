@@ -11,9 +11,8 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 import android.widget.Toolbar;
-
-import java.io.File;
 
 public class MainActivity extends Activity implements SharedPreferences.OnSharedPreferenceChangeListener {
     public static final String REQUEST_LOCATION_PERMISSIONS = "wtf.kl.locshare.REQUEST_LOCATION_PERMISSIONS";
@@ -25,8 +24,8 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
             case PERMISSION_REQUEST_ACCESS_FINE_LOCATION:
                 SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Intent intent = new Intent(this, LocationPublisher.class);
-                    intent.setAction(LocationPublisher.START_LOCATION_SERVICE);
+                    Intent intent = new Intent(this, PublisherService.class);
+                    intent.setAction(PublisherService.START_LOCATION_SERVICE);
                     startService(intent);
                 } else {
                     SharedPreferences.Editor edit = sp.edit();
@@ -39,8 +38,8 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         switch (key) {
             case "share_location":
-                Intent intent = new Intent(this, LocationPublisher.class);
-                intent.setAction(LocationPublisher.START_LOCATION_SERVICE);
+                Intent intent = new Intent(this, PublisherService.class);
+                intent.setAction(PublisherService.START_LOCATION_SERVICE);
                 startService(intent);
                 break;
             case "server_url":
@@ -52,6 +51,14 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Storage.createInstance(this);
+        try {
+            Storage.getInstance().load();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         setContentView(R.layout.activity_main);
 
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
@@ -63,43 +70,31 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.main_fab);
         fab.setOnClickListener(view -> {
-            Intent intent = new Intent(MainActivity.this, AddUserActivity.class);
-            startActivity(intent);
+            AddUserAction.build(this);
         });
-
-        if (UserStore.isEmpty()) {
-            try {
-                UserStore.readFromFile(new File(getFilesDir(), "users"));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
 
         Client.setToken(sp.getString("auth_token", ""));
         Client.setUsername(sp.getString("auth_username", ""));
         Client.setURL(sp.getString("server_url", ""));
-
-        Intent intent = getIntent();
-        if (intent.getAction().equals(REQUEST_LOCATION_PERMISSIONS)) {
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    PERMISSION_REQUEST_ACCESS_FINE_LOCATION);
-            return;
-        }
-
-        Intent locIntent = new Intent(this, LocationPublisher.class);
-        locIntent.setAction(LocationPublisher.START_LOCATION_SERVICE);
-        startService(locIntent);
     }
 
     @Override
-    protected void onPause() {
-        try {
-            UserStore.writeToFile(new File(getFilesDir(), "users"));
-        } catch (Exception e) {
-            e.printStackTrace();
+    protected void onResume() {
+        super.onResume();
+        Intent intent = getIntent();
+        if (intent != null && intent.getAction().equals(REQUEST_LOCATION_PERMISSIONS)) {
+            if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                        PERMISSION_REQUEST_ACCESS_FINE_LOCATION);
+            }
+            setIntent(null);
+            return;
         }
 
-        super.onPause();
+        Intent locIntent = new Intent(this, PublisherService.class);
+        locIntent.setAction(PublisherService.START_LOCATION_SERVICE);
+        startService(locIntent);
     }
 
     @Override
@@ -127,6 +122,19 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
             case R.id.action_create:
                 intent = new Intent(this, NewAccountActivity.class);
                 startActivity(intent);
+                break;
+            case R.id.action_run_test:
+                try {
+                    new Tester().run();
+                    Toast success = Toast.makeText(this, "Test completed successfully",
+                            Toast.LENGTH_SHORT);
+                    success.show();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Toast failure = Toast.makeText(this, "Tests failed",
+                            Toast.LENGTH_SHORT);
+                    failure.show();
+                }
                 break;
         }
 

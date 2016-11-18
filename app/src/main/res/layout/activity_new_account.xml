@@ -32,23 +32,11 @@
         android:orientation="vertical"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
         <android.support.design.widget.TextInputLayout
-            android:id="@+id/new_account_name_layout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <EditText
-                android:id="@+id/new_account_name"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/label_name"
-                android:inputType="text" />
-        </android.support.design.widget.TextInputLayout>
-        <android.support.design.widget.TextInputLayout
             android:id="@+id/new_account_username_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <EditText
+            <android.support.design.widget.TextInputEditText
                 android:id="@+id/new_account_username"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -59,23 +47,22 @@
             android:id="@+id/new_account_password_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
-            <EditText
+            <android.support.design.widget.TextInputEditText
                 android:id="@+id/new_account_password"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/label_password"
-                android:imeOptions="actionDone"
                 android:inputType="textPassword" />
         </android.support.design.widget.TextInputLayout>
         <android.support.design.widget.TextInputLayout
             android:id="@+id/new_account_password_repeat_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
-            <EditText
+            <android.support.design.widget.TextInputEditText
                 android:id="@+id/new_account_password_repeat"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/label_password"
+                android:hint="@string/label_repeat_password"
                 android:imeOptions="actionDone"
                 android:inputType="textPassword" />
         </android.support.design.widget.TextInputLayout>

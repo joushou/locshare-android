@@ -38,44 +38,31 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="12sp"
-                android:labelFor="@+id/edit_username"
-                android:text="@string/label_username"/>
-            <TextView
-                android:id="@id/edit_username"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textIsSelectable="true"
-                android:padding="12sp"/>
+
             <android.support.design.widget.TextInputLayout
-                android:id="@+id/edit_remote_pubkey_layout"
+                android:id="@+id/edit_username_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
-                <EditText
-                    android:id="@+id/edit_remote_pubkey"
-                    android:inputType="text"
-                    android:hint="@string/label_remote_pubkey"
+
+                <android.support.design.widget.TextInputEditText
+                    android:id="@+id/edit_username"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textSize="16sp"
-                    android:padding="12sp"/>
+                    android:hint="@string/label_name"
+                    android:enabled="false"
+                    android:inputType="text" />
             </android.support.design.widget.TextInputLayout>
             <android.support.design.widget.TextInputLayout
-                android:id="@+id/edit_local_privkey_layout"
+                android:id="@+id/edit_name_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
-                <EditText
-                    android:id="@+id/edit_local_privkey"
-                    android:inputType="text"
-                    android:hint="@string/label_local_privkey"
+
+                <android.support.design.widget.TextInputEditText
+                    android:id="@+id/edit_name"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textSize="16sp"
-                    android:padding="12sp"/>
+                    android:hint="@string/label_name"
+                    android:inputType="text" />
             </android.support.design.widget.TextInputLayout>
         </LinearLayout>
         <LinearLayout
@@ -84,19 +71,6 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="24sp"
             android:orientation="vertical">
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="12sp"
-                android:labelFor="@+id/edit_local_pubkey"
-                android:text="@string/label_local_pubkey"/>
-            <TextView
-                android:id="@id/edit_local_pubkey"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textIsSelectable="true"
-                android:padding="12sp"/>
             <RelativeLayout
                 android:id="@+id/edit_publish_layout"
                 android:layout_height="wrap_content"
@@ -111,25 +85,6 @@
                     android:text="@string/label_publish"/>
                 <Switch
                     android:id="@id/edit_publish"
-                    android:layout_height="wrap_content"
-                    android:layout_width="wrap_content"
-                    android:layout_alignParentEnd="true"
-                    android:checked="true"/>
-            </RelativeLayout>
-            <RelativeLayout
-                android:id="@+id/edit_subscribe_layout"
-                android:layout_height="wrap_content"
-                android:layout_width="match_parent">
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:layout_alignParentStart="true"
-                    android:padding="12sp"
-                    android:labelFor="@+id/edit_subscribe"
-                    android:text="@string/label_subscribe"/>
-                <Switch
-                    android:id="@id/edit_subscribe"
                     android:layout_height="wrap_content"
                     android:layout_width="wrap_content"
                     android:layout_alignParentEnd="true"

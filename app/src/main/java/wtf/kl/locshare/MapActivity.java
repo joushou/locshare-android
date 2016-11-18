@@ -3,11 +3,9 @@ package wtf.kl.locshare;
 import android.app.ActionBar;
 import android.app.AlertDialog;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Rect;
 import android.location.Location;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.design.widget.BottomSheetBehavior;
 import android.support.v4.app.FragmentActivity;
 import android.view.Menu;
@@ -35,7 +33,7 @@ import java.util.Locale;
 
 import static java.lang.Math.abs;
 
-public class MapActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, UserStore.UpdateListener {
+public class MapActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, UsersStore.UpdateListener {
     private GoogleApiClient googleApiClient = null;
     private User user = null;
     private Location location = null;
@@ -44,6 +42,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
     private BottomSheetBehavior<View> bottomSheetBehavior = null;
     private View bottomSheet = null;
     private boolean mapInPlace = false;
+
+    private UsersStore users = Storage.getInstance().getUsersStore();
 
 
     private void updateSheet() {
@@ -73,7 +73,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
 
         updateMarkers();
 
-        GeocodeUtil.Request req = new GeocodeUtil.Request(user.username, location, new int[]{GeocodeUtil.TWO_LINE_SUMMARY, GeocodeUtil.FULL_ADDRESS});
+        GeocodeUtil.Request req = new GeocodeUtil.Request(user.getUsername(), location,
+                new int[]{GeocodeUtil.TWO_LINE_SUMMARY, GeocodeUtil.FULL_ADDRESS});
 
         geocoderTask = GeocodeUtil.Geocode(this, new GeocodeUtil.Request[]{req}, (resps) -> {
             if (resps.length == 0) return;
@@ -125,7 +126,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
                     .strokeColor(0x70FFAA00));
         }
 
-        map.addMarker(new MarkerOptions().position(ll).title(user.name));
+        map.addMarker(new MarkerOptions().position(ll).title(user.getName()));
         if (!mapInPlace) {
             map.moveCamera(CameraUpdateFactory.newLatLngZoom(ll, 15));
             mapInPlace = true;
@@ -153,7 +154,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
                         .setTitle("Delete user?")
                         .setNegativeButton("Cancel", (dialog, id) -> {})
                         .setPositiveButton("Delete", (dialog, id) -> {
-                            UserStore.delUser(user);
+                            users.delUser(user);
                             finish();
                         });
 
@@ -164,7 +165,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
 
             case R.id.action_edit:
                 Intent intent = new Intent(this, EditUserActivity.class);
-                intent.putExtra("username", user.username);
+                intent.putExtra("username", user.getUsername());
 
                 startActivity(intent);
                 break;
@@ -175,9 +176,9 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
     }
 
     public void onUpdate(String source) {
-        updateSheet();
+        View bottomSheet = findViewById(R.id.map_bottom_sheet);
+        bottomSheet.post(this::updateSheet);
     }
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -228,11 +229,11 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
             return;
         }
 
-        user = UserStore.getUser(b.getString("username"));
+        user = users.getUser(b.getString("username"));
         location = user.getLastLocation();
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        toolbar.setTitle(user.name);
+        toolbar.setTitle(user.getName());
 
         googleApiClient = new GoogleApiClient.Builder(this)
                 .addApi(LocationServices.API)
@@ -252,7 +253,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
             updateMarkers();
         }
 
-        UserStore.addUpdateListener(this);
+        users.addUpdateListener(this);
         try {
             Client.subscribe();
         } catch (Exception e) {
@@ -297,12 +298,11 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
 
     public void onConnectionSuspended(int cause) {}
 
-
     @Override
     public void onPause() {
         super.onPause();
 
-        UserStore.delUpdateListener(this);
+        users.delUpdateListener(this);
         Client.unsubscribe();
 
         if (geocoderTask != null) {
@@ -313,6 +313,12 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
             googleApiClient.disconnect();
             googleApiClient = null;
         }
+
+        try {
+            Storage.getInstance().store();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -320,7 +326,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
         map.clear();
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        toolbar.setTitle(user.name);
+        toolbar.setTitle(user.getName());
 
         try {
             map.setMyLocationEnabled(true);

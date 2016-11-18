@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.design.widget.TextInputEditText;
 import android.support.design.widget.TextInputLayout;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -139,8 +140,8 @@ public class LoginActivity extends Activity {
             ab.setHomeAsUpIndicator(R.drawable.ic_clear_24dp);
         }
 
-        EditText password = (EditText) findViewById(R.id.login_password);
-        EditText username = (EditText) findViewById(R.id.login_username);
+        TextInputEditText password = (TextInputEditText) findViewById(R.id.login_password);
+        TextInputEditText username = (TextInputEditText) findViewById(R.id.login_username);
 
         TextView.OnEditorActionListener f = (v, actionId, event) -> {
             switch (actionId) {

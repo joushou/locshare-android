@@ -3,13 +3,11 @@ package wtf.kl.locshare;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.format.DateUtils;
@@ -154,7 +152,7 @@ class UserListAdapter extends RecyclerView.Adapter<UserListAdapter.ViewHolder> {
 
             Context context = v.getContext();
             Intent intent = new Intent(context, MapActivity.class);
-            intent.putExtra("username", item.user.username);
+            intent.putExtra("username", item.user.getUsername());
             context.startActivity(intent);
         }
 
@@ -173,11 +171,12 @@ class UserListAdapter extends RecyclerView.Adapter<UserListAdapter.ViewHolder> {
     }
 
     void rebuildList() {
+        UsersStore users = Storage.getInstance().getUsersStore();
         values.clear();
         indexTable.clear();
         keyTable.clear();
 
-        Set<String> userKeys = UserStore.getUserKeys();
+        Set<String> userKeys = users.getUserKeys();
         String[] keysarr = new String[userKeys.size()];
         keysarr = userKeys.toArray(keysarr);
         Arrays.sort(keysarr);
@@ -188,10 +187,11 @@ class UserListAdapter extends RecyclerView.Adapter<UserListAdapter.ViewHolder> {
             indexTable.put(i, key);
             keyTable.put(key, i);
 
-            User user = UserStore.getUser(key);
+            User user = users.getUser(key);
             UserListItem ul = new UserListItem(user);
-            values.put(user.username, ul);
+            values.put(user.getUsername(), ul);
         }
+        notifyDataSetChanged();
     }
 
     void updateLocation(Location location) {
@@ -223,7 +223,7 @@ class UserListAdapter extends RecyclerView.Adapter<UserListAdapter.ViewHolder> {
         UserListItem item = getItem(position);
         if (item == null) return;
 
-        holder.nameView.setText(item.user.name);
+        holder.nameView.setText(item.user.getName());
         holder.locView.setText(item.getLocationString());
         holder.distView.setText(item.getDistanceStringTo(location));
         holder.timeView.setText(item.getTimeString());
@@ -239,9 +239,9 @@ class UserListAdapter extends RecyclerView.Adapter<UserListAdapter.ViewHolder> {
 /**
  * A placeholder fragment containing a simple view.
  */
-public class UserListFragment extends Fragment implements GoogleApiClient.ConnectionCallbacks, LocationListener, UserStore.UpdateListener {
+public class UserListFragment extends Fragment implements GoogleApiClient.ConnectionCallbacks,
+        LocationListener, UsersStore.UpdateListener {
     private final UserListAdapter adapter = new UserListAdapter();
-    private long listVersion = 0;
 
     private GoogleApiClient googleApiClient = null;
 
@@ -276,8 +276,13 @@ public class UserListFragment extends Fragment implements GoogleApiClient.Connec
         LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, this);
     }
 
-    public void onUpdate(String username) {
+    private void update(String username) {
         UserListItem item = adapter.getItem(username);
+        if (item == null) {
+            adapter.rebuildList();
+            return;
+        }
+
         if (!item.updateLocation())
             return;
 
@@ -287,7 +292,7 @@ public class UserListFragment extends Fragment implements GoogleApiClient.Connec
             geocoderTasks.remove(username);
         }
 
-        GeocodeUtil.Request req = new GeocodeUtil.Request(item.user.username, item.location,
+        GeocodeUtil.Request req = new GeocodeUtil.Request(item.user.getUsername(), item.location,
                 new int[]{GeocodeUtil.ONE_LINE_SUMMARY});
         GeocodeUtil.Request[] reqs = new GeocodeUtil.Request[]{req};
 
@@ -315,6 +320,10 @@ public class UserListFragment extends Fragment implements GoogleApiClient.Connec
         geocoderTasks.put(username, task);
     }
 
+    public void onUpdate(String username) {
+        getView().post(() -> update(username));
+    }
+
     public void onLocationChanged(Location location) {
         adapter.updateLocation(location);
     }
@@ -336,13 +345,9 @@ public class UserListFragment extends Fragment implements GoogleApiClient.Connec
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        long newVersion = UserStore.getVersion();
-        if (listVersion != newVersion) {
-            listVersion = newVersion;
-            adapter.rebuildList();
-        }
+    public void onResume() {
+        super.onResume();
+        adapter.rebuildList();
 
         googleApiClient = new GoogleApiClient.Builder(getContext())
                 .addApi(LocationServices.API)
@@ -351,7 +356,8 @@ public class UserListFragment extends Fragment implements GoogleApiClient.Connec
 
         googleApiClient.connect();
 
-        UserStore.addUpdateListener(this);
+        UsersStore users = Storage.getInstance().getUsersStore();
+        users.addUpdateListener(this);
         try {
             Client.subscribe();
         } catch (Exception e) {
@@ -371,12 +377,20 @@ public class UserListFragment extends Fragment implements GoogleApiClient.Connec
     public void onPause() {
         super.onPause();
         removeLocationListener();
-        UserStore.delUpdateListener(this);
         Client.unsubscribe();
+
+        UsersStore users = Storage.getInstance().getUsersStore();
+        users.delUpdateListener(this);
 
         if (googleApiClient != null) {
             googleApiClient.disconnect();
             googleApiClient = null;
+        }
+
+        try {
+            Storage.getInstance().store();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

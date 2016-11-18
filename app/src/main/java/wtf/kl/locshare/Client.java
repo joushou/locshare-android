@@ -23,6 +23,10 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import wtf.kl.locshare.crypto.ECPublicKey;
+import wtf.kl.locshare.crypto.ECSignedPublicKey;
+import wtf.kl.locshare.crypto.PreKey;
+import wtf.kl.locshare.crypto.SignedPreKey;
 
 class Client {
     static class AuthException extends Exception {
@@ -57,6 +61,8 @@ class Client {
         WebSocket ws = null;
         int subscriberCount = 0;
 
+        private UsersStore users = Storage.getInstance().getUsersStore();
+
         @Override
         public void onTextMessage(WebSocket websocket, String message) throws Exception {
             try {
@@ -65,15 +71,18 @@ class Client {
                 String content = obj.getString("content");
                 byte[] rawMsg = Base64.decode(content, Base64.NO_WRAP);
 
+                User user = users.getUser(source);
+                if (user == null) {
+                    user = users.newUser(source);
+                    users.addUser(user);
+                }
 
-                User user = UserStore.getUser(source);
-                byte[] p = CryptoManager.decryptWithCurve25519PrivateKey(rawMsg, user.localPrivKey);
+                byte[] p = user.getSession().decrypt(rawMsg);
                 Location location = LocationCodec.decode(p);
                 user.addLocation(location);
-                UserStore.notifyUpdate(source);
+                users.notifyUpdate(source);
             } catch (Exception e) {
                 e.printStackTrace();
-                // PASS
             }
         }
 
@@ -95,7 +104,7 @@ class Client {
     private static String authHeader() { return "LOCSHARE " + instance.token; }
 
     static void setURL(String url) {
-        if (url.charAt(url.length()-1) == '/') {
+        if (url.length() > 0 && url.charAt(url.length()-1) == '/') {
             url = url.substring(0, url.length()-1);
         }
         instance.url = url;
@@ -105,12 +114,11 @@ class Client {
     static String getUsername() { return instance.username; }
     static void setUsername(String username) { instance.username = username; }
 
-    static void create(String username, String password, String name)
+    static void create(String username, String password)
         throws AuthException, ClientException, ServerException, IOException, JSONException {
         JSONObject obj = new JSONObject();
         obj.put("username", username);
         obj.put("password", password);
-        obj.put("name", name);
 
         RequestBody body = RequestBody.create(JSON, obj.toString());
         Request request = new Request.Builder()
@@ -223,49 +231,13 @@ class Client {
         }
     }
 
-    static String setName(String username, String name)
-            throws AuthException, ClientException, ServerException, IOException, JSONException {
-        if (instance.token.isEmpty()) {
-            throw new AuthException("no token");
-        }
-        RequestBody body = RequestBody.create(TEXT, name);
-
-        Request request = new Request.Builder()
-                .url(instance.url + "/user/" + username + "/name")
-                .addHeader("Authorization", authHeader())
-                .put(body)
-                .build();
-
-        Call call = instance.client.newCall(request);
-        try (Response response = call.execute()) {
-            if (!response.isSuccessful()) {
-                JSONObject err;
-                switch (response.code()) {
-                    case 400:
-                        err = new JSONObject(response.body().string());
-                        throw new ClientException(err.getString("error"));
-                    case 401:
-                         err = new JSONObject(response.body().string());
-                        throw new AuthException(err.getString("error"));
-                    case 500:
-                        err = new JSONObject(response.body().string());
-                        throw new ServerException(err.getString("error"));
-                    default:
-                        throw new ClientException("error: " + Integer.toString(response.code()));
-                }
-            }
-
-            return response.body().string();
-        }
-    }
-
-    static  String getName(String username)
+    static PreKey getOneTimeKey(String username)
             throws AuthException, ClientException, ServerException, IOException, JSONException {
         if (instance.token.isEmpty()) {
             throw new AuthException("no token");
         }
         Request request = new Request.Builder()
-                .url(instance.url + "/user/" + username + "/name")
+                .url(instance.url + "/user/" + username + "/oneTimeKey")
                 .addHeader("Authorization", authHeader())
                 .build();
 
@@ -289,7 +261,191 @@ class Client {
                 }
             }
 
-            return response.body().string();
+            JSONObject obj = new JSONObject(response.body().string());
+            int id = obj.getInt("keyID");
+            byte[] key = Base64.decode(obj.getString("key"), Base64.NO_WRAP);
+            return new PreKey(new ECPublicKey(key), id);
+        }
+    }
+
+    static void setOneTimeKey(String username, PreKey identity)
+            throws AuthException, ClientException, ServerException, IOException, JSONException {
+        if (instance.token.isEmpty()) {
+            throw new AuthException("no token");
+        }
+
+        RequestBody body = RequestBody.create(BINARY, identity.publicKey.publicKey);
+
+        Request request = new Request.Builder()
+                .url(instance.url + "/user/" + username + "/oneTimeKey/" +
+                        Integer.toString(identity.id))
+                .addHeader("Authorization", authHeader())
+                .put(body)
+                .build();
+
+        Call call = instance.client.newCall(request);
+        try (Response response = call.execute()) {
+            if (!response.isSuccessful()) {
+                JSONObject err;
+                switch (response.code()) {
+                    case 400:
+                    case 404:
+                        err = new JSONObject(response.body().string());
+                        throw new ClientException(err.getString("error"));
+                    case 401:
+                        err = new JSONObject(response.body().string());
+                        throw new AuthException(err.getString("error"));
+                    case 500:
+                        err = new JSONObject(response.body().string());
+                        throw new ServerException(err.getString("error"));
+                    default:
+                        throw new ClientException("error: " + Integer.toString(response.code()));
+                }
+            }
+        }
+    }
+
+    static SignedPreKey getTemporaryKey(String username)
+            throws AuthException, ClientException, ServerException, IOException, JSONException {
+        if (instance.token.isEmpty()) {
+            throw new AuthException("no token");
+        }
+        Request request = new Request.Builder()
+                .url(instance.url + "/user/" + username + "/temporaryKey")
+                .addHeader("Authorization", authHeader())
+                .build();
+
+        Call call = instance.client.newCall(request);
+        try (Response response = call.execute()) {
+            if (!response.isSuccessful()) {
+                JSONObject err;
+                switch (response.code()) {
+                    case 400:
+                    case 404:
+                        err = new JSONObject(response.body().string());
+                        throw new ClientException(err.getString("error"));
+                    case 401:
+                        err = new JSONObject(response.body().string());
+                        throw new AuthException(err.getString("error"));
+                    case 500:
+                        err = new JSONObject(response.body().string());
+                        throw new ServerException(err.getString("error"));
+                    default:
+                        throw new ClientException("error: " + Integer.toString(response.code()));
+                }
+            }
+
+            JSONObject obj = new JSONObject(response.body().string());
+            int id = obj.getInt("keyID");
+            byte[] key = Base64.decode(obj.getString("key"), Base64.NO_WRAP);
+            return new SignedPreKey(new ECSignedPublicKey(key), id);
+        }
+    }
+
+    static void setTemporaryKey(String username, SignedPreKey identity)
+            throws AuthException, ClientException, ServerException, IOException, JSONException {
+        if (instance.token.isEmpty()) {
+            throw new AuthException("no token");
+        }
+
+        RequestBody body = RequestBody.create(BINARY, identity.publicKey.publicKeyAndSignature);
+
+        Request request = new Request.Builder()
+                .url(instance.url + "/user/" + username + "/temporaryKey/" +
+                        Integer.toString(identity.id))
+                .addHeader("Authorization", authHeader())
+                .put(body)
+                .build();
+
+        Call call = instance.client.newCall(request);
+        try (Response response = call.execute()) {
+            if (!response.isSuccessful()) {
+                JSONObject err;
+                switch (response.code()) {
+                    case 400:
+                    case 404:
+                        err = new JSONObject(response.body().string());
+                        throw new ClientException(err.getString("error"));
+                    case 401:
+                        err = new JSONObject(response.body().string());
+                        throw new AuthException(err.getString("error"));
+                    case 500:
+                        err = new JSONObject(response.body().string());
+                        throw new ServerException(err.getString("error"));
+                    default:
+                        throw new ClientException("error: " + Integer.toString(response.code()));
+                }
+            }
+        }
+    }
+
+    static ECPublicKey getIdentity(String username)
+            throws AuthException, ClientException, ServerException, IOException, JSONException {
+        if (instance.token.isEmpty()) {
+            throw new AuthException("no token");
+        }
+        Request request = new Request.Builder()
+                .url(instance.url + "/user/" + username + "/identity")
+                .addHeader("Authorization", authHeader())
+                .build();
+
+        Call call = instance.client.newCall(request);
+        try (Response response = call.execute()) {
+            if (!response.isSuccessful()) {
+                JSONObject err;
+                switch (response.code()) {
+                    case 400:
+                    case 404:
+                        err = new JSONObject(response.body().string());
+                        throw new ClientException(err.getString("error"));
+                    case 401:
+                        err = new JSONObject(response.body().string());
+                        throw new AuthException(err.getString("error"));
+                    case 500:
+                        err = new JSONObject(response.body().string());
+                        throw new ServerException(err.getString("error"));
+                    default:
+                        throw new ClientException("error: " + Integer.toString(response.code()));
+                }
+            }
+
+            return new ECPublicKey(response.body().bytes());
+        }
+    }
+
+    static void setIdentity(String username, ECPublicKey identity)
+            throws AuthException, ClientException, ServerException, IOException, JSONException {
+        if (instance.token.isEmpty()) {
+            throw new AuthException("no token");
+        }
+
+        RequestBody body = RequestBody.create(BINARY, identity.publicKey);
+
+        Request request = new Request.Builder()
+                .url(instance.url + "/user/" + username + "/identity")
+                .addHeader("Authorization", authHeader())
+                .put(body)
+                .build();
+
+        Call call = instance.client.newCall(request);
+        try (Response response = call.execute()) {
+            if (!response.isSuccessful()) {
+                JSONObject err;
+                switch (response.code()) {
+                    case 400:
+                    case 404:
+                        err = new JSONObject(response.body().string());
+                        throw new ClientException(err.getString("error"));
+                    case 401:
+                        err = new JSONObject(response.body().string());
+                        throw new AuthException(err.getString("error"));
+                    case 500:
+                        err = new JSONObject(response.body().string());
+                        throw new ServerException(err.getString("error"));
+                    default:
+                        throw new ClientException("error: " + Integer.toString(response.code()));
+                }
+            }
         }
     }
 
@@ -298,6 +454,7 @@ class Client {
         if (instance.token.isEmpty()) {
             throw new AuthException("no token");
         }
+
         RequestBody body = RequestBody.create(BINARY, content);
 
         Request request = new Request.Builder()
