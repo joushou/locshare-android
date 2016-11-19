@@ -70,7 +70,7 @@ public class MapActivity extends Activity implements GoogleApiClient.ConnectionC
         TextView movement = (TextView) bottomSheet.findViewById(R.id.map_sheet_movement);
         movement.setText(String.format(Locale.ENGLISH, "%.1f km/h\n%.1f degrees", location.getSpeed() / 1000, location.getBearing()));
 
-//        updateMarkers();
+        updateMarkers();
 
         GeocodeUtil.Request req = new GeocodeUtil.Request(user.getUsername(), location,
                 new int[]{GeocodeUtil.TWO_LINE_SUMMARY, GeocodeUtil.FULL_ADDRESS});
@@ -223,12 +223,12 @@ public class MapActivity extends Activity implements GoogleApiClient.ConnectionC
         mapInPlace = false;
         MapFragment mapFragment =
                 (MapFragment) getFragmentManager().findFragmentById(R.id.map_fragment);
+
         if (savedInstanceState == null) {
             mapFragment.setRetainInstance(true);
         }
-        mapFragment.getMapAsync(map -> {
-            map.clear();
 
+        mapFragment.getMapAsync(map -> {
             try {
                 map.setMyLocationEnabled(true);
             } catch (SecurityException e) {
@@ -238,7 +238,6 @@ public class MapActivity extends Activity implements GoogleApiClient.ConnectionC
 
             updateMarkers();
         });
-
     }
 
     @Override
@@ -288,16 +287,6 @@ public class MapActivity extends Activity implements GoogleApiClient.ConnectionC
             geocoderTask = null;
         }
 
-        if (map != null) {
-            try {
-                map.setMyLocationEnabled(false);
-            } catch (SecurityException e) {
-                e.printStackTrace();
-            }
-            map.clear();
-            map = null;
-        }
-
         if(googleApiClient != null) {
             googleApiClient.disconnect();
             googleApiClient = null;
@@ -311,8 +300,6 @@ public class MapActivity extends Activity implements GoogleApiClient.ConnectionC
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        System.gc();
     }
 
     @Override
@@ -321,7 +308,15 @@ public class MapActivity extends Activity implements GoogleApiClient.ConnectionC
         bottomSheetBehavior = null;
         users = null;
 
-        System.gc();
+        if (map != null) {
+            try {
+                map.setMyLocationEnabled(false);
+            } catch (SecurityException e) {
+                e.printStackTrace();
+            }
+            map.clear();
+            map = null;
+        }
     }
 
     static private String distanceAsString(double distance) {

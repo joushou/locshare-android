@@ -44,5 +44,4 @@ dependencies {
     compile 'com.squareup.okhttp3:okhttp:3.4.2'
     compile 'org.whispersystems:curve25519-android:0.2.5'
     compile 'com.neovisionaries:nv-websocket-client:1.30'
-    compile 'org.msgpack:msgpack-core:0.8.11'
 }
