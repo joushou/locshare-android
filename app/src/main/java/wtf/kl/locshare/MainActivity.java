@@ -24,7 +24,7 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
             case PERMISSION_REQUEST_ACCESS_FINE_LOCATION:
                 SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Intent intent = new Intent(this, PublisherService.class);
+                    Intent intent = new Intent(getApplicationContext(), PublisherService.class);
                     intent.setAction(PublisherService.START_LOCATION_SERVICE);
                     startService(intent);
                 } else {
@@ -38,7 +38,7 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         switch (key) {
             case "share_location":
-                Intent intent = new Intent(this, PublisherService.class);
+                Intent intent = new Intent(getApplicationContext(), PublisherService.class);
                 intent.setAction(PublisherService.START_LOCATION_SERVICE);
                 startService(intent);
                 break;
@@ -52,7 +52,7 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Storage.createInstance(this);
+        Storage.createInstance(getApplicationContext());
         try {
             Storage.getInstance().load();
         } catch (Exception e) {
@@ -92,7 +92,7 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
             return;
         }
 
-        Intent locIntent = new Intent(this, PublisherService.class);
+        Intent locIntent = new Intent(getApplicationContext(), PublisherService.class);
         locIntent.setAction(PublisherService.START_LOCATION_SERVICE);
         startService(locIntent);
     }
@@ -112,15 +112,11 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
         Intent intent;
         switch (item.getItemId()) {
             case R.id.action_settings:
-                intent = new Intent(this, SettingsActivity.class);
+                intent = new Intent(getApplicationContext(), SettingsActivity.class);
                 startActivity(intent);
                 break;
             case R.id.action_login:
-                intent = new Intent(this, LoginActivity.class);
-                startActivity(intent);
-                break;
-            case R.id.action_create:
-                intent = new Intent(this, NewAccountActivity.class);
+                intent = new Intent(getApplicationContext(), LoginActivity.class);
                 startActivity(intent);
                 break;
             case R.id.action_run_test:
@@ -135,6 +131,10 @@ public class MainActivity extends Activity implements SharedPreferences.OnShared
                             Toast.LENGTH_SHORT);
                     failure.show();
                 }
+                break;
+            case R.id.action_create:
+                intent = new Intent(getApplicationContext(), NewAccountActivity.class);
+                startActivity(intent);
                 break;
         }
 

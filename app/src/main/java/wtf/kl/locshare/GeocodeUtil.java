@@ -54,8 +54,8 @@ class GeocodeUtil {
     }
 
     static class GeocoderTask extends AsyncTask<Request, Void, Response[]> {
-        private final Context context;
-        private final Callback callback;
+        private Context context;
+        private Callback callback;
 
         GeocoderTask(Context context, Callback callback) {
             this.context = context;
@@ -162,6 +162,7 @@ class GeocodeUtil {
             return res;
         }
 
+        @Override
         protected Response[] doInBackground(Request ...params) {
             Response[] ar = new Response[params.length];
 
@@ -208,8 +209,17 @@ class GeocodeUtil {
             return ar;
         }
 
+        @Override
+        protected void onCancelled(Response[] responses) {
+            callback = null;
+            context = null;
+        }
+
+        @Override
         protected void onPostExecute(Response[] results) {
             callback.onResult(results);
+            callback = null;
+            context = null;
         }
     }
 

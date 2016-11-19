@@ -11,11 +11,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Switch;
-import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.Toolbar;
-
-import java.io.IOException;
 
 public class EditUserActivity extends Activity {
     private String username = null;

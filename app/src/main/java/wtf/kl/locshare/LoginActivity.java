@@ -27,12 +27,13 @@ public class LoginActivity extends Activity {
         boolean success = false;
     }
     static private class LoginTask extends AsyncTask<Parameters, Void, Result> {
-        private final Activity context;
+        private Activity context;
 
         LoginTask(Activity context) {
             this.context = context;
         }
 
+        @Override
         protected Result doInBackground(Parameters ...params) {
             if (params.length != 1) {
                 throw new IllegalArgumentException("LoginTask must have 1 parameter");
@@ -55,10 +56,17 @@ public class LoginActivity extends Activity {
             return result;
         }
 
+        @Override
+        protected void onCancelled(Result result) {
+            context = null;
+        }
+
+        @Override
         protected void onPostExecute(Result result) {
             if (!result.success) {
                 Toast toast = Toast.makeText(context, "Login failed", Toast.LENGTH_SHORT);
                 toast.show();
+                context = null;
                 return;
             }
 
@@ -72,6 +80,7 @@ public class LoginActivity extends Activity {
             edit.apply();
 
             context.finish();
+            context = null;
         }
     }
 

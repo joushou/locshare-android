@@ -1,13 +1,13 @@
 package wtf.kl.locshare;
 
 import android.app.ActionBar;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Rect;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.design.widget.BottomSheetBehavior;
-import android.support.v4.app.FragmentActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -20,7 +20,6 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
@@ -33,20 +32,20 @@ import java.util.Locale;
 
 import static java.lang.Math.abs;
 
-public class MapActivity extends FragmentActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, UsersStore.UpdateListener {
+public class MapActivity extends Activity implements GoogleApiClient.ConnectionCallbacks, UsersStore.UpdateListener {
     private GoogleApiClient googleApiClient = null;
     private User user = null;
     private Location location = null;
     private GoogleMap map = null;
     private GeocodeUtil.GeocoderTask geocoderTask = null;
     private BottomSheetBehavior<View> bottomSheetBehavior = null;
-    private View bottomSheet = null;
     private boolean mapInPlace = false;
 
-    private UsersStore users = Storage.getInstance().getUsersStore();
+    private UsersStore users = null;
 
 
     private void updateSheet() {
+
         if (location == null)
             return;
 
@@ -71,12 +70,13 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
         TextView movement = (TextView) bottomSheet.findViewById(R.id.map_sheet_movement);
         movement.setText(String.format(Locale.ENGLISH, "%.1f km/h\n%.1f degrees", location.getSpeed() / 1000, location.getBearing()));
 
-        updateMarkers();
+//        updateMarkers();
 
         GeocodeUtil.Request req = new GeocodeUtil.Request(user.getUsername(), location,
                 new int[]{GeocodeUtil.TWO_LINE_SUMMARY, GeocodeUtil.FULL_ADDRESS});
 
-        geocoderTask = GeocodeUtil.Geocode(this, new GeocodeUtil.Request[]{req}, (resps) -> {
+        geocoderTask = GeocodeUtil.Geocode(getApplicationContext(),
+                new GeocodeUtil.Request[]{req}, (resps) -> {
             if (resps.length == 0) return;
 
             GeocodeUtil.Response resp = resps[0];
@@ -156,7 +156,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
                         .setPositiveButton("Delete", (dialog, id) -> {
                             users.delUser(user);
                             finish();
-                        });
+                        })
+                        .create();
 
                 // 3. Get the AlertDialog from create()
                 AlertDialog dialog = builder.create();
@@ -164,7 +165,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
                 break;
 
             case R.id.action_edit:
-                Intent intent = new Intent(this, EditUserActivity.class);
+                Intent intent = new Intent(getApplicationContext(), EditUserActivity.class);
                 intent.putExtra("username", user.getUsername());
 
                 startActivity(intent);
@@ -181,8 +182,27 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
     }
 
     @Override
+    public boolean dispatchTouchEvent(MotionEvent event){
+        if (event.getAction() == MotionEvent.ACTION_DOWN && bottomSheetBehavior != null) {
+            switch (bottomSheetBehavior.getState()) {
+                case BottomSheetBehavior.STATE_EXPANDED:
+                    Rect outRect = new Rect();
+                    View bottomSheet = findViewById(R.id.map_bottom_sheet);
+                    bottomSheet.getGlobalVisibleRect(outRect);
+
+                    if(!outRect.contains((int)event.getRawX(), (int)event.getRawY()))
+                        bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                    break;
+            }
+        }
+
+        return super.dispatchTouchEvent(event);
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        users = Storage.getInstance().getUsersStore();
 
         setContentView(R.layout.activity_map);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -193,29 +213,32 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
             ab.setDisplayHomeAsUpEnabled(true);
         }
 
-        bottomSheet = findViewById(R.id.map_bottom_sheet);
+        View bottomSheet = findViewById(R.id.map_bottom_sheet);
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
         bottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
 
         View peek = bottomSheet.findViewById(R.id.map_sheet_peek);
         peek.post(() -> bottomSheetBehavior.setPeekHeight(peek.getHeight()));
-    }
 
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent event){
-        if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            switch (bottomSheetBehavior.getState()) {
-                case BottomSheetBehavior.STATE_EXPANDED:
-                    Rect outRect = new Rect();
-                    bottomSheet.getGlobalVisibleRect(outRect);
-
-                    if(!outRect.contains((int)event.getRawX(), (int)event.getRawY()))
-                        bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-                    break;
-            }
+        mapInPlace = false;
+        MapFragment mapFragment =
+                (MapFragment) getFragmentManager().findFragmentById(R.id.map_fragment);
+        if (savedInstanceState == null) {
+            mapFragment.setRetainInstance(true);
         }
+        mapFragment.getMapAsync(map -> {
+            map.clear();
 
-        return super.dispatchTouchEvent(event);
+            try {
+                map.setMyLocationEnabled(true);
+            } catch (SecurityException e) {
+                // PASS
+            }
+            this.map = map;
+
+            updateMarkers();
+        });
+
     }
 
     @Override
@@ -244,15 +267,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
 
         updateSheet();
 
-        mapInPlace = false;
-        if (map == null) {
-            MapFragment mapFragment =
-                    (MapFragment) getFragmentManager().findFragmentById(R.id.map_fragment);
-            mapFragment.getMapAsync(this);
-        } else {
-            updateMarkers();
-        }
-
         users.addUpdateListener(this);
         try {
             Client.subscribe();
@@ -261,7 +275,56 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
         }
     }
 
-    private String distanceAsString(double distance) {
+
+    @Override
+    public void onPause() {
+        super.onPause();
+
+        Client.unsubscribe();
+        users.delUpdateListener(this);
+
+        if (geocoderTask != null) {
+            geocoderTask.cancel(true);
+            geocoderTask = null;
+        }
+
+        if (map != null) {
+            try {
+                map.setMyLocationEnabled(false);
+            } catch (SecurityException e) {
+                e.printStackTrace();
+            }
+            map.clear();
+            map = null;
+        }
+
+        if(googleApiClient != null) {
+            googleApiClient.disconnect();
+            googleApiClient = null;
+        }
+
+        location = null;
+        user = null;
+
+        try {
+            Storage.getInstance().store();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        System.gc();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        bottomSheetBehavior = null;
+        users = null;
+
+        System.gc();
+    }
+
+    static private String distanceAsString(double distance) {
         if (Double.isNaN(distance)) {
             return "";
         } else if (distance > 999999) {
@@ -297,44 +360,4 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
     }
 
     public void onConnectionSuspended(int cause) {}
-
-    @Override
-    public void onPause() {
-        super.onPause();
-
-        users.delUpdateListener(this);
-        Client.unsubscribe();
-
-        if (geocoderTask != null) {
-            geocoderTask.cancel(true);
-            geocoderTask = null;
-        }
-        if(googleApiClient != null) {
-            googleApiClient.disconnect();
-            googleApiClient = null;
-        }
-
-        try {
-            Storage.getInstance().store();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void onMapReady(GoogleMap map) {
-        map.clear();
-
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        toolbar.setTitle(user.getName());
-
-        try {
-            map.setMyLocationEnabled(true);
-        } catch (SecurityException e) {
-            // PASS
-        }
-        this.map = map;
-
-        updateMarkers();
-    }
 }

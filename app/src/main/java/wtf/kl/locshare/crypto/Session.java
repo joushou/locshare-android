@@ -25,7 +25,7 @@ class AliceSessionParameters {
                            ECSignedPublicKey theirTemporaryKey, ECPublicKey theirOneTimeKey)
     throws InvalidParameters {
         if (!theirTemporaryKey.verifySignature(theirIdentity))
-            throw new InvalidParameters();
+            throw new InvalidParameters("signature does not verify");
 
         this.ourIdentity = ourIdentity;
         this.ourBaseKey = ourBaseKey;
@@ -112,7 +112,7 @@ public class Session {
         }
 
         if (counter - chainKey.getIndex() > 1024)
-            throw new InvalidMessage();
+            throw new InvalidMessage("message counter more than 1024 messages into the future");
 
         while (chainKey.getIndex() < counter) {
             MessageKey messageKey = chainKey.getMessageKey();
@@ -203,7 +203,7 @@ public class Session {
 
             if (store.getTheirIdentity() != null &&
                     !store.getTheirIdentity().equals(pmsg.identityKey))
-                throw new InvalidMessage();
+                throw new InvalidMessage("identity changed");
 
             ECKeyPair oneTimeKey = store.getOurOneTimeKey();
             if (oneTimeKey == null) {
@@ -214,7 +214,7 @@ public class Session {
             }
             ECKeyPair temporaryKey = privateStore.getTemporaryKey(pmsg.temporaryKeyID);
             if (temporaryKey == null)
-                throw new InvalidMessage();
+                throw new InvalidMessage("no such temporary key");
 
             ECKeyPair identity = privateStore.getOurIdentity();
 
@@ -226,18 +226,18 @@ public class Session {
             message = Message.deserialize(cipherText);
             store.setOurOneTimeKey(null);
         } else {
-            throw new InvalidMessage();
+            throw new InvalidMessage("unknown message type");
         }
 
         ChainKey chainKey = getChainKey(message.senderRatchetKey);
         MessageKey keys = getMessageKeys(message.senderRatchetKey, chainKey, message.counter);
 
         if (keys == null)
-            throw new InvalidMessage();
+            throw new InvalidMessage("no message keys available for message");
 
         if (!message.verifyMac(keys.getMacKey(), store.getTheirIdentity(),
                 privateStore.getOurIdentity().asPublicKey()))
-            throw new InvalidMessage();
+            throw new InvalidMessage("message does not authenticate");
 
         store.setHasUnacknowledgedPreKey(false);
         store.setTheirOneTimeKeyID(0);

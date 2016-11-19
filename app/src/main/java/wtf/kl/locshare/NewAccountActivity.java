@@ -44,12 +44,13 @@ public class NewAccountActivity extends Activity {
         }
     }
     static private class NewAccountTask extends AsyncTask<Parameters, Void, Result> {
-        private final Activity context;
+        private Activity context;
 
         NewAccountTask(Activity context) {
             this.context = context;
         }
 
+        @Override
         protected Result doInBackground(Parameters ...params) {
             if (params.length != 1) {
                 throw new IllegalArgumentException("LoginTask must have 1 parameter");
@@ -97,12 +98,19 @@ public class NewAccountActivity extends Activity {
             }
         }
 
+        @Override
+        protected void onCancelled(Result result) {
+            context = null;
+        }
+
+        @Override
         protected void onPostExecute(Result result) {
             if (!result.success) {
                 if (result.toast) {
                     Toast toast = Toast.makeText(context, result.errorMessage, Toast.LENGTH_SHORT);
                     toast.show();
                 }
+                context = null;
                 return;
             }
 
@@ -113,6 +121,7 @@ public class NewAccountActivity extends Activity {
             edit.apply();
 
             context.finish();
+            context = null;
         }
     }
 

@@ -151,7 +151,7 @@ class UserListAdapter extends RecyclerView.Adapter<UserListAdapter.ViewHolder> {
             if (item.user == null) return;
 
             Context context = v.getContext();
-            Intent intent = new Intent(context, MapActivity.class);
+            Intent intent = new Intent(context.getApplicationContext(), MapActivity.class);
             intent.putExtra("username", item.user.getUsername());
             context.startActivity(intent);
         }
@@ -192,6 +192,12 @@ class UserListAdapter extends RecyclerView.Adapter<UserListAdapter.ViewHolder> {
             values.put(user.getUsername(), ul);
         }
         notifyDataSetChanged();
+    }
+
+    void clearList() {
+        values.clear();
+        indexTable.clear();
+        keyTable.clear();
     }
 
     void updateLocation(Location location) {
@@ -298,7 +304,8 @@ public class UserListFragment extends Fragment implements GoogleApiClient.Connec
 
         adapter.notifyItemChanged(adapter.getIndexForKey(username));
 
-        GeocodeUtil.GeocoderTask task = GeocodeUtil.Geocode(getContext(), reqs, (resps) -> {
+        GeocodeUtil.GeocoderTask task = GeocodeUtil.Geocode(getContext().getApplicationContext(),
+                reqs, (resps) -> {
             geocoderTasks.remove(username);
             for (GeocodeUtil.Response resp: resps) {
                 if (!resp.success) {
@@ -336,12 +343,29 @@ public class UserListFragment extends Fragment implements GoogleApiClient.Connec
 
         RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.userlist_recyclerview);
         recyclerView.setHasFixedSize(true);
-        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getContext());
+        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(
+                getContext().getApplicationContext());
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(adapter);
-        recyclerView.addItemDecoration(new SimpleDividerItemDecoration(getContext()));
+        recyclerView.addItemDecoration(
+                new SimpleDividerItemDecoration(getContext().getApplicationContext()));
 
         return view;
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        View view = getView();
+        if (view == null)
+            return;
+
+        RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.userlist_recyclerview);
+        if (recyclerView == null)
+            return;
+
+        recyclerView.setAdapter(null);
+        recyclerView.setLayoutManager(null);
     }
 
     @Override
@@ -367,15 +391,11 @@ public class UserListFragment extends Fragment implements GoogleApiClient.Connec
         updateTimes();
     }
 
-    public void onConnected(Bundle connectionHint) {
-        setupLocationListener();
-    }
-
-    public void onConnectionSuspended(int cause) {}
-
     @Override
     public void onPause() {
         super.onPause();
+        adapter.clearList();
+
         removeLocationListener();
         Client.unsubscribe();
 
@@ -393,4 +413,12 @@ public class UserListFragment extends Fragment implements GoogleApiClient.Connec
             e.printStackTrace();
         }
     }
+
+    public void onConnected(Bundle connectionHint) {
+        setupLocationListener();
+    }
+
+    public void onConnectionSuspended(int cause) {}
+
+
 }

@@ -32,7 +32,7 @@ public class PublisherService extends Service implements GoogleApiClient.Connect
     public static final String START_LOCATION_SERVICE = "wtf.kl.locshare.START_LOCATION_SERVICE";
     public static final String NETWORK_NOTIFICATION = "wtf.kl.locshare.NETWORK_NOTIFICATION";
 
-    private ArrayList<Intent> startReason = new ArrayList<>();
+    private ArrayList<Intent> startReason = null;
 
     private PendingIntent pendingLocationIntent = null;
     private PendingIntent pendingNetworkIntent = null;
@@ -100,7 +100,7 @@ public class PublisherService extends Service implements GoogleApiClient.Connect
                 != PackageManager.PERMISSION_GRANTED) {
 
             // Get MainActivity to get us those precious permissions!
-            Intent dialogIntent = new Intent(this, MainActivity.class);
+            Intent dialogIntent = new Intent(getApplicationContext(), MainActivity.class);
             dialogIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             dialogIntent.setAction(MainActivity.REQUEST_LOCATION_PERMISSIONS);
             startActivity(dialogIntent);
@@ -128,7 +128,7 @@ public class PublisherService extends Service implements GoogleApiClient.Connect
                 .setInterval(interval)
                 .setSmallestDisplacement(25);
 
-        Intent intent = new Intent(this, PublisherService.class);
+        Intent intent = new Intent(getApplicationContext(), PublisherService.class);
         pendingLocationIntent = PendingIntent.getService(this, 0, intent, 0);
 
         LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, pendingLocationIntent);
@@ -154,7 +154,7 @@ public class PublisherService extends Service implements GoogleApiClient.Connect
         ConnectivityManager cm =
                 (ConnectivityManager)this.getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        Intent intent = new Intent(this, PublisherService.class);
+        Intent intent = new Intent(getApplicationContext(), PublisherService.class);
         intent.setAction(NETWORK_NOTIFICATION);
         pendingNetworkIntent = PendingIntent.getService(this, 0, intent, 0);
 
@@ -217,7 +217,7 @@ public class PublisherService extends Service implements GoogleApiClient.Connect
         if (startReason != null) {
             ArrayList<Intent> sr = startReason;
 
-            startReason = new ArrayList<>();
+            startReason = null;
             for (Intent intent : sr) {
                 onStartCommand(intent, 0, 0);
             }
@@ -228,7 +228,11 @@ public class PublisherService extends Service implements GoogleApiClient.Connect
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Storage.createInstance(getApplicationContext());
         if (googleApiClient == null || !googleApiClient.isConnected()) {
+            if (startReason == null)
+                startReason = new ArrayList<>();
+
             startReason.add(intent);
 
             if (googleApiClient != null) {
@@ -275,6 +279,7 @@ public class PublisherService extends Service implements GoogleApiClient.Connect
 
         if (startReason != null && startReason.size() > 0) {
             startReason.clear();
+            startReason = null;
         }
     }
 

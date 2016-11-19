@@ -14,7 +14,7 @@ import wtf.kl.locshare.crypto.ECPublicKey;
 import wtf.kl.locshare.crypto.PreKey;
 import wtf.kl.locshare.crypto.SignedPreKey;
 
-public class AddUserAction {
+class AddUserAction {
     static private class Result {
         boolean success = false;
         boolean toast = false;
@@ -37,10 +37,11 @@ public class AddUserAction {
         }
     }
     static private class AddUserTask extends AsyncTask<String, Void, Result> {
-        private final Activity context;
+        private Activity context;
 
         AddUserTask(Activity context) { this.context = context; }
 
+        @Override
         protected Result doInBackground(String ...params) {
             if (params.length != 1)
                 throw new IllegalArgumentException("AddUserTask takes exactly one argument");
@@ -87,8 +88,15 @@ public class AddUserAction {
             return Result.success(username);
         }
 
+        @Override
+        protected void onCancelled(Result result) {
+            context = null;
+        }
+
+        @Override
         protected void onPostExecute(Result result) {
             if (result.success) {
+                context = null;
                 Storage.getInstance().getUsersStore().notifyUpdate(result.username);
                 return;
             }
@@ -97,11 +105,12 @@ public class AddUserAction {
             if (result.toast) {
                 Toast toast = Toast.makeText(context, msg, Toast.LENGTH_SHORT);
                 toast.show();
+                context = null;
             }
         }
     }
 
-    static public void build(Activity context) {
+    static void build(Activity context) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle("Add user");
 
@@ -110,22 +119,25 @@ public class AddUserAction {
 
         TextInputEditText username = (TextInputEditText) view.findViewById(R.id.add_user_username);
 
-        builder.setPositiveButton("Add",(dialog, which) -> {
-            new AddUserTask(context).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,
-                    username.getText().toString());
+        builder.setPositiveButton("Add", (dialog, which) -> {
+            AddUserTask task = new AddUserTask(context);
+            String un = username.getText().toString();
+            task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, un);
         });
         builder.setNegativeButton("Cancel", (dialog, which) -> {
-            dialog.cancel();
+            dialog.dismiss();
         });
+        builder.setCancelable(true);
 
         AlertDialog dialog = builder.show();
 
         username.setOnEditorActionListener((v, actionId, event) -> {
             switch (actionId) {
                 case EditorInfo.IME_ACTION_DONE:
-                    dialog.cancel();
-                    new AddUserTask(context).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,
-                            username.getText().toString());
+                    dialog.dismiss();
+                    AddUserTask task = new AddUserTask(context);
+                    String un = username.getText().toString();
+                    task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, un);
                     return true;
             }
             return false;

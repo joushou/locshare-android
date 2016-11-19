@@ -13,7 +13,6 @@ import android.app.ActionBar;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.view.MenuItem;
-import android.support.v4.app.NavUtils;
 
 import java.util.List;
 
@@ -129,7 +128,10 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         int id = item.getItemId();
         if (id == android.R.id.home) {
             if (!super.onMenuItemSelected(featureId, item)) {
-                NavUtils.navigateUpFromSameTask(this);
+                Intent upIntent = getParentActivityIntent();
+                upIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(upIntent);
+                finish();
             }
             return true;
         }
@@ -185,7 +187,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         public boolean onOptionsItemSelected(MenuItem item) {
             int id = item.getItemId();
             if (id == android.R.id.home) {
-                startActivity(new Intent(getActivity(), SettingsActivity.class));
+                startActivity(new Intent(getContext().getApplicationContext(),
+                        SettingsActivity.class));
                 return true;
             }
             return super.onOptionsItemSelected(item);
@@ -215,7 +218,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         public boolean onOptionsItemSelected(MenuItem item) {
             int id = item.getItemId();
             if (id == android.R.id.home) {
-                startActivity(new Intent(getActivity(), SettingsActivity.class));
+                startActivity(new Intent(getContext().getApplicationContext(),
+                        SettingsActivity.class));
                 return true;
             }
             return super.onOptionsItemSelected(item);
